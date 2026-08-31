@@ -1,4 +1,4 @@
-﻿#include "Game.h"
+#include "Game.h"
 
 void Game::Initialize()
 {
@@ -13,10 +13,40 @@ void Game::Initialize()
 
     levelScrollY = 0.0f;
     scrollSpeed = 100.0f; // Pixels por segundo
+
+    // Carrega a Música de Fundo
+    bgMusicVolume = 0.0f; // Comeca 100% mudo para o Fade-In
+    bgMusicTargetVolume = 0.4f; // Volume alvo onde ela deve estabilizar
+
+    bgMusic = LoadMusicStream("assets/audio/bgmusic/music1.ogg");
+    if (bgMusic.frameCount == 0) bgMusic = LoadMusicStream("../../assets/audio/bgmusic/music1.ogg");
+    if (bgMusic.frameCount == 0) bgMusic = LoadMusicStream("../../../assets/audio/bgmusic/music1.ogg");
+    
+    if (bgMusic.frameCount != 0) 
+    {
+        bgMusic.looping = true;
+        SetMusicVolume(bgMusic, bgMusicVolume);
+        PlayMusicStream(bgMusic);
+    }
 }
 
 void Game::Update(float deltaTime)
 {
+    // Atualiza a musica de fundo e faz o Fade-In
+    if (bgMusic.frameCount != 0) 
+    {
+        UpdateMusicStream(bgMusic);
+
+        // Se o volume atual for menor que o alvo, vai subindo devagar!
+        if (bgMusicVolume < bgMusicTargetVolume)
+        {
+            bgMusicVolume += 0.05f * deltaTime; // Velocidade do Fade In
+            if (bgMusicVolume > bgMusicTargetVolume) bgMusicVolume = bgMusicTargetVolume;
+            
+            SetMusicVolume(bgMusic, bgMusicVolume);
+        }
+    }
+
     // Rola o cenario
     levelScrollY += scrollSpeed * deltaTime;
 

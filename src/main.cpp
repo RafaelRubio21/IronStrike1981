@@ -1,4 +1,4 @@
-﻿#include "raylib.h"
+#include "raylib.h"
 #include "game/Game.h"
 
 int main()
@@ -7,6 +7,7 @@ int main()
     const int screenHeight = 768;
 
     InitWindow(screenWidth, screenHeight, "Iron Strike 1981 - 2D Arcade");
+    InitAudioDevice(); // Inicia o Motor de Som (Hardware)
     SetTargetFPS(60);
 
     Game game;
@@ -18,6 +19,7 @@ int main()
         game.Render();
     }
 
+    CloseAudioDevice(); // Desliga a placa de som
     CloseWindow();
     return 0;
 }

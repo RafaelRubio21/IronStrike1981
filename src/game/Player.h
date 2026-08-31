@@ -11,7 +11,9 @@ public:
 
 private:
     Vector2 position;
-    float speed;
+    Vector2 velocity;     // Velocidade atual (Inercia)
+    float acceleration;   // Forca do motor ao apertar a tecla
+    float friction;       // Resistencia do ar (frenagem)
     
     Texture2D sprite; // Corpo do helicoptero
     bool hasSprite;
@@ -23,4 +25,10 @@ private:
     float targetRotorSpeed; // Velocidade maxima
     
     float scale; // Escala do helicoptero (para decolagem)
+    
+    // Motor de Som do Helicoptero
+    Sound engineStartingSound;
+    Music engineLoopMusic;
+    bool engineLoopActive;
+    float engineStartDelayTimer;
 };

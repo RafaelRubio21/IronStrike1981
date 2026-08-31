@@ -3,7 +3,10 @@
 void Player::Initialize(Vector2 startPos)
 {
     position = startPos;
-    speed = 300.0f; // Pixels por segundo
+    velocity = {0.0f, 0.0f};
+    acceleration = 1800.0f;
+    friction = 6.0f;
+    
     hasSprite = false;
     hasRotor = false;
     rotorRotation = 0.0f;
@@ -23,40 +26,105 @@ void Player::Initialize(Vector2 startPos)
     if (rotorSprite.id == 0) rotorSprite = LoadTexture("../../assets/sprites/helice.png");
     if (rotorSprite.id == 0) rotorSprite = LoadTexture("../../../assets/sprites/helice.png");
     if (rotorSprite.id != 0) hasRotor = true;
+
+    // Carrega os Sons
+    engineLoopActive = false;
+    
+    engineStartingSound = LoadSound("assets/audio/helicopter/engine_starting.ogg");
+    if (engineStartingSound.frameCount == 0) engineStartingSound = LoadSound("../../assets/audio/helicopter/engine_starting.ogg");
+    if (engineStartingSound.frameCount == 0) engineStartingSound = LoadSound("../../../assets/audio/helicopter/engine_starting.ogg");
+
+    engineLoopMusic = LoadMusicStream("assets/audio/helicopter/engine.ogg");
+    if (engineLoopMusic.frameCount == 0) engineLoopMusic = LoadMusicStream("../../assets/audio/helicopter/engine.ogg");
+    if (engineLoopMusic.frameCount == 0) engineLoopMusic = LoadMusicStream("../../../assets/audio/helicopter/engine.ogg");
+    engineLoopMusic.looping = true; // Define que esse vai tocar pra sempre
+
+    // -------------------------------------------------------------
+    // AQUI VOCE AJUSTA O VOLUME DOS SONS (0.0f a 1.0f)
+    // -------------------------------------------------------------
+    if (engineStartingSound.frameCount != 0) SetSoundVolume(engineStartingSound, 0.3f); // 30%
+    if (engineLoopMusic.frameCount != 0) SetMusicVolume(engineLoopMusic, 0.3f); // 30%
+
+    // O timer vai segurar a inicializacao do motor por meio segundo (0.5f)
+    engineStartDelayTimer = 0.5f; 
 }
 
 void Player::Update(float deltaTime)
 {
-    // O jogador so pode se mover quando o helicoptero terminar a decolagem (escala = 1.0)
-    if (scale >= 0.7f)
+    // LOGICA DO DELAY DE PARTIDA
+    if (engineStartDelayTimer > 0.0f)
     {
-        if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A))  position.x -= speed * deltaTime;
-        if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) position.x += speed * deltaTime;
-        if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W))    position.y -= speed * deltaTime;
-        if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S))  position.y += speed * deltaTime;
+        engineStartDelayTimer -= deltaTime;
+        if (engineStartDelayTimer <= 0.0f)
+        {
+            // O timer zerou! Dá o Play no som de inicialização
+            if (engineStartingSound.frameCount != 0) PlaySound(engineStartingSound);
+        }
+    }
+    else
+    {
+        // LOGICA DO SOM DO MOTOR
+        if (!engineLoopActive) 
+        {
+            // Se o som de inicializacao ja foi carregado E parou de tocar (acabou o audio)
+            if (engineStartingSound.frameCount != 0 && !IsSoundPlaying(engineStartingSound)) 
+            {
+                engineLoopActive = true;
+                if (engineLoopMusic.frameCount != 0) PlayMusicStream(engineLoopMusic); // Liga o Loop contínuo!
+            }
+        } 
+        else 
+        {
+            // Regra do Raylib: Todo MusicStream precisa ser atualizado todo frame para continuar tocando
+            if (engineLoopMusic.frameCount != 0) UpdateMusicStream(engineLoopMusic);
+        }
+
+        // Acelera a helice gradativamente ao longo do tempo (ganha 500 graus por segundo, a cada segundo)
+        if (currentRotorSpeed < targetRotorSpeed)
+        {
+            currentRotorSpeed += 500.0f * deltaTime; 
+            if (currentRotorSpeed > targetRotorSpeed) 
+                currentRotorSpeed = targetRotorSpeed;
+        }
+
+        // Quando o motor pega forca (700 graus/s), o helicoptero "levanta voo"
+        if (currentRotorSpeed > 700.0f)
+        {
+            if (scale < 1.0f)
+            {
+                scale += 0.1f * deltaTime; // Sobe suavemente (leva ~1.3 segundos para ir de 0.6 a 1.0)
+                if (scale > 1.0f) scale = 1.0f;
+            }
+        }
     }
 
-    // Acelera a helice gradativamente ao longo do tempo (ganha 500 graus por segundo, a cada segundo)
-    if (currentRotorSpeed < targetRotorSpeed)
-    {
-        currentRotorSpeed += 500.0f * deltaTime; 
-        if (currentRotorSpeed > targetRotorSpeed) 
-            currentRotorSpeed = targetRotorSpeed;
-    }
-
-    // Gira a helice usando a velocidade atual
+    // Gira a helice usando a velocidade atual (sempre roda, mesmo que seja zero)
     rotorRotation += currentRotorSpeed * deltaTime;
     if (rotorRotation >= 360.0f) rotorRotation -= 360.0f;
 
-    // Quando o motor pega forca (700 graus/s), o helicoptero "levanta voo"
-    if (currentRotorSpeed > 700.0f)
+    // O jogador so pode se mover quando o helicoptero terminar a decolagem (escala = 1.0)
+    if (scale >= 1.0f)
     {
-        if (scale < 1.0f)
-        {
-            scale += 0.15f * deltaTime; // Sobe suavemente
-            if (scale > 1.0f) scale = 1.0f;
-        }
+        Vector2 input = {0.0f, 0.0f};
+
+        if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A))  input.x -= 1.0f;
+        if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) input.x += 1.0f;
+        if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W))    input.y -= 1.0f;
+        if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S))  input.y += 1.0f;
+
+        // Acelera baseado no botão apertado
+        velocity.x += input.x * acceleration * deltaTime;
+        velocity.y += input.y * acceleration * deltaTime;
     }
+
+    // O atrito (resistencia do ar) aplica independente do jogador estar decolando ou nao,
+    // garantindo que ele sempre pare suavemente
+    velocity.x -= velocity.x * friction * deltaTime;
+    velocity.y -= velocity.y * friction * deltaTime;
+
+    // Aplica a velocidade na posicao da tela
+    position.x += velocity.x * deltaTime;
+    position.y += velocity.y * deltaTime;
 
     // Prende na tela
     if (position.x < 20) position.x = 20;
