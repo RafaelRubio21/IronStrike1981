@@ -5,6 +5,8 @@ static Texture2D expFrames[10] = {0};
 static bool expLoaded = false;
 static Texture2D smokeFrames[7] = {0};
 static bool smokeLoaded = false;
+static float SMOKE_OFFSET_X = 15.0f;   // Ajuste da fumaça na horizontal
+static float SMOKE_OFFSET_Y = -20.0f; // Ajuste da fumaça na vertical (-10 puxa pra cima do chassi)
 
 void Game::Initialize()
 {
@@ -223,6 +225,7 @@ void Game::Render()
     
     BeginMode2D(camera);
         // Quando criarmos as tilesets (chao e agua), desenhamos elas aqui embaixo!
+        for (const auto& t : tanks) t.DrawTracksAndDust();
     EndMode2D();
 
     // ETAPA 3: CARIMBA O CANVAS DE SOMBRAS UNIFICADO
@@ -244,8 +247,8 @@ void Game::Render()
             float sW = (float)sTex.width;
             float sH = (float)sTex.height;
             Rectangle sSource = { 0.0f, 0.0f, (float)sTex.width, (float)sTex.height };
-            // Fumaça deslocada um pouquinho pra cima e sempre sem rotação (0.0f)
-            Rectangle sDest = { t.position.x, t.position.y - 10.0f, sW, sH };
+            // Fumaça deslocada e sempre sem rotação (0.0f)
+            Rectangle sDest = { t.position.x + SMOKE_OFFSET_X, t.position.y + SMOKE_OFFSET_Y, sW, sH };
             Vector2 sOrigin = { sW / 2.0f, sH / 2.0f };
             DrawTexturePro(sTex, sSource, sDest, sOrigin, 0.0f, WHITE);
         }

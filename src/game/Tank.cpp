@@ -12,6 +12,13 @@ static float TANK_VOL_EXPLOSION = 0.5f;   // Volume da explosão (0.0 a 1.0)
 static float TANK_VOL_ENGINE = 0.15f;     // Volume do motor (0.0 a 1.0)
 static float TANK_VOL_SHOOTING = 0.4f;    // Volume do tiro inimigo (0.0 a 1.0)
 static float TANK_CANNON_OFFSET_Y = -25.0f; // Ajuste o encaixe do canhão (Pra frente / trás)
+
+// Configuração das Partículas (Poeira e Rastros)
+static float TANK_DUST_RATE = 0.05f;       // Frequencia que a poeira nasce (menor = mais denso)
+static float TANK_DUST_OFFSET = 20.0f;     // Distancia do centro do tanque até a lagarta (traseira)
+static float TANK_DUST_SPREAD = 15.0f;     // O quão caótico/largo é o espalhamento
+static float TANK_DUST_MIN_RADIUS = 1.0f;  // Tamanho inicial mínimo da poeira
+static float TANK_DUST_MAX_RADIUS = 2.0f; // Tamanho inicial máximo
 // =================================================================
 
 // Variáveis globais/estáticas para carregar texturas e áudios apenas uma vez
@@ -66,6 +73,11 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection)
     // Inicia a animação da fumaça em um frame aleatório para não sincronizar com outros tanques!
     smokeFrame = GetRandomValue(0, 6);
     smokeAnimTimer = 0.0f;
+    
+    tracks.clear();
+    trackSpawnTimer = 0.0f;
+    dustParticles.clear();
+    dustSpawnTimer = 0.0f;
     
     if (!tankTexturesLoaded)
     {
@@ -154,6 +166,31 @@ Rectangle Tank::GetHitbox() const
     return { position.x - (width / 2.0f), position.y - (height / 2.0f), width, height };
 }
 
+void Tank::DrawTracksAndDust() const
+{
+    /* --- EFEITOS DESATIVADOS (Para uso no futuro) ---
+    // Desenha rastros (marcas de pneu na grama)
+    for (const auto& tr : tracks)
+    {
+        float alpha = tr.lifeTime / 4.0f; // Fada de 1.0 para 0.0
+        unsigned char a = (unsigned char)(alpha * 60.0f); // Max alpha = 60 (bem suave)
+        
+        // Retângulo simulando a lagarta esmagando o mato
+        Rectangle dest = { tr.position.x, tr.position.y, 45.0f * scale, 30.0f * scale };
+        Vector2 orig = { dest.width / 2.0f, dest.height / 2.0f };
+        DrawRectanglePro(dest, orig, tr.rotation, { 20, 15, 5, a }); // Marrom escuro transparente
+    }
+    
+    // Desenha poeira
+    for (const auto& dp : dustParticles)
+    {
+        float alpha = dp.lifeTime / dp.maxLife;
+        unsigned char a = (unsigned char)(alpha * 120.0f);
+        DrawCircleV(dp.position, dp.radius, { 190, 160, 120, a }); // Cor de terra/areia
+    }
+    --------------------------------------------------- */
+}
+
 void Tank::Update(float deltaTime, Vector2 playerPos)
 {
     if (!isActive) return;
@@ -163,6 +200,58 @@ void Tank::Update(float deltaTime, Vector2 playerPos)
     // Movimento
     position.x += velocity.x * deltaTime;
     position.y += velocity.y * deltaTime;
+    
+    // Atualiza vida das partículas
+    for (int i = 0; i < tracks.size(); i++) {
+        tracks[i].lifeTime -= deltaTime;
+        if (tracks[i].lifeTime <= 0) { tracks.erase(tracks.begin() + i); i--; }
+    }
+    
+    for (int i = 0; i < dustParticles.size(); i++) {
+        dustParticles[i].lifeTime -= deltaTime;
+        dustParticles[i].position.x += dustParticles[i].velocity.x * deltaTime;
+        dustParticles[i].position.y += dustParticles[i].velocity.y * deltaTime;
+        dustParticles[i].radius += 10.0f * deltaTime; // Poeira espalha
+        if (dustParticles[i].lifeTime <= 0) { dustParticles.erase(dustParticles.begin() + i); i--; }
+    }
+    
+    // Spawna partículas se o tanque estiver se movendo rápido o suficiente
+    //float speedSqr = (velocity.x * velocity.x) + (velocity.y * velocity.y);
+    //if (speedSqr > 10.0f)
+    //{
+        /* --- EFEITOS DESATIVADOS (Para uso no futuro) ---
+        trackSpawnTimer -= deltaTime;
+        if (trackSpawnTimer <= 0.0f) {
+            trackSpawnTimer = 0.1f; // Frequência do rastro no chão
+            TrackMark tm;
+            tm.position = position;
+            tm.rotation = rotation;
+            tm.lifeTime = 4.0f; // Dura 4 segundos e some
+            tracks.push_back(tm);
+        }
+        
+        dustSpawnTimer -= deltaTime;
+        if (dustSpawnTimer <= 0.0f) {
+            dustSpawnTimer = TANK_DUST_RATE; // Usa a configuração de densidade
+            
+            // Poeira sai na direção oposta ao movimento
+            float len = sqrtf(speedSqr);
+            Vector2 dir = { -velocity.x / len, -velocity.y / len };
+            
+            DustParticle dp;
+            // Usa as configurações de Offsets e Espalhamento (Spread)
+            dp.position.x = position.x + (dir.x * TANK_DUST_OFFSET) + GetRandomValue(-(int)TANK_DUST_SPREAD, (int)TANK_DUST_SPREAD);
+            dp.position.y = position.y + (dir.y * TANK_DUST_OFFSET) + GetRandomValue(-(int)TANK_DUST_SPREAD, (int)TANK_DUST_SPREAD);
+            
+            dp.velocity.x = dir.x * 15.0f + GetRandomValue(-10, 10);
+            dp.velocity.y = dir.y * 15.0f + GetRandomValue(-10, 10);
+            dp.maxLife = 0.5f + ((float)GetRandomValue(0, 5) / 10.0f); // Vive entre 0.5 e 1.0 seg
+            dp.lifeTime = dp.maxLife;
+            dp.radius = (float)GetRandomValue((int)TANK_DUST_MIN_RADIUS, (int)TANK_DUST_MAX_RADIUS);
+            dustParticles.push_back(dp);
+        }
+        --------------------------------------------------- */
+    //}
     
     if (isDestroyed)
     {

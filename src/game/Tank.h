@@ -1,11 +1,28 @@
 #pragma once
 #include "raylib.h"
 
+#include <vector>
+
+struct TrackMark {
+    Vector2 position;
+    float rotation;
+    float lifeTime;
+};
+
+struct DustParticle {
+    Vector2 position;
+    Vector2 velocity;
+    float lifeTime;
+    float maxLife;
+    float radius;
+};
+
 class Tank
 {
 public:
     void Initialize(Vector2 startPos, int spawnDirection); 
     void Update(float deltaTime, Vector2 playerPos);
+    void DrawTracksAndDust() const;
     void DrawShadows() const;
     void DrawBody() const;
     
@@ -24,6 +41,12 @@ public:
     
     int smokeFrame;
     float smokeAnimTimer;
+    
+    std::vector<TrackMark> tracks;
+    float trackSpawnTimer;
+    
+    std::vector<DustParticle> dustParticles;
+    float dustSpawnTimer;
 
 private:
     Vector2 velocity;
