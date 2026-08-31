@@ -1,4 +1,10 @@
 #include "Game.h"
+#include <raylib.h>
+
+static Texture2D expFrames[10] = {0};
+static bool expLoaded = false;
+static Texture2D smokeFrames[7] = {0};
+static bool smokeLoaded = false;
 
 void Game::Initialize()
 {
@@ -12,6 +18,7 @@ void Game::Initialize()
     player.Initialize({ 1024.0f / 2.0f, 600.0f });
 
     tanks.clear();
+    explosions.clear();
     tankSpawnTimer = 0.0f;
 
     levelScrollY = 0.0f;
@@ -52,6 +59,48 @@ void Game::Initialize()
                 impactSounds[i] = LoadSound(TextFormat("%simpact%d.ogg", audioPaths[p], i + 1));
             }
         }
+    }
+    
+    // Carrega a Animação de Explosão (Explosion2_1 até Explosion2_10)
+    if (!expLoaded)
+    {
+        const char* expPaths[] = {
+            "assets/sprites/explosions/explosion2/",
+            "../../assets/sprites/explosions/explosion2/",
+            "../../../assets/sprites/explosions/explosion2/"
+        };
+        for (int p = 0; p < 3; p++)
+        {
+            if (expFrames[0].id == 0)
+            {
+                for (int f = 0; f < 10; f++)
+                {
+                    expFrames[f] = LoadTexture(TextFormat("%sExplosion2_%d.png", expPaths[p], f + 1));
+                }
+            }
+        }
+        expLoaded = true;
+    }
+    
+    // Carrega a Animação de Fumaça (smoke1_1 até smoke1_7)
+    if (!smokeLoaded)
+    {
+        const char* smokePaths[] = {
+            "assets/sprites/smokes/smoke1/",
+            "../../assets/sprites/smokes/smoke1/",
+            "../../../assets/sprites/smokes/smoke1/"
+        };
+        for (int p = 0; p < 3; p++)
+        {
+            if (smokeFrames[0].id == 0)
+            {
+                for (int f = 0; f < 7; f++)
+                {
+                    smokeFrames[f] = LoadTexture(TextFormat("%ssmoke1_%d.png", smokePaths[p], f + 1));
+                }
+            }
+        }
+        smokeLoaded = true;
     }
 }
 
@@ -98,7 +147,7 @@ void Game::Update(float deltaTime)
     // Atualiza os tanques, checa colisão com tiro, e remove os inativos
     for (int i = 0; i < tanks.size(); i++)
     {
-        tanks[i].Update(deltaTime);
+        tanks[i].Update(deltaTime, player.GetPosition());
         
         // Só tenta matar o tanque se ele já não estiver destruído
         if (!tanks[i].isDestroyed)
@@ -107,12 +156,25 @@ void Game::Update(float deltaTime)
             {
                 tanks[i].TakeDamage(1); // Arranca 1 de HP por bala
                 
-                // Escolhe 1 dos 5 sons de impacto aleatoriamente
-                int randSfx = GetRandomValue(0, 4);
-                if (impactSounds[randSfx].frameCount != 0)
+                // Se esse tiro acabou de destruir o tanque
+                if (tanks[i].hp <= 0 && tanks[i].isDestroyed)
                 {
-                    SetSoundVolume(impactSounds[randSfx], 0.7f);
-                    PlaySound(impactSounds[randSfx]);
+                    Explosion ex;
+                    ex.position = tanks[i].position;
+                    ex.currentFrame = 0;
+                    ex.frameTimer = 0.0f;
+                    ex.scale = 1.0f; // Pode ajustar a escala da explosão
+                    explosions.push_back(ex);
+                }
+                else
+                {
+                    // Escolhe 1 dos 5 sons de impacto aleatoriamente (só se não explodiu)
+                    int randSfx = GetRandomValue(0, 4);
+                    if (impactSounds[randSfx].frameCount != 0)
+                    {
+                        SetSoundVolume(impactSounds[randSfx], 0.7f);
+                        PlaySound(impactSounds[randSfx]);
+                    }
                 }
             }
         }
@@ -122,6 +184,22 @@ void Game::Update(float deltaTime)
         {
             tanks.erase(tanks.begin() + i);
             i--;
+        }
+    }
+    
+    // Anima e remove explosões
+    for (int i = 0; i < explosions.size(); i++)
+    {
+        explosions[i].frameTimer += deltaTime;
+        if (explosions[i].frameTimer >= 0.05f) // 20 FPS
+        {
+            explosions[i].frameTimer = 0.0f;
+            explosions[i].currentFrame++;
+            if (explosions[i].currentFrame >= 10)
+            {
+                explosions.erase(explosions.begin() + i);
+                i--;
+            }
         }
     }
 }
@@ -135,7 +213,7 @@ void Game::Render()
         // Desenha a sombra de todos os tanques primeiro
         for (const auto& t : tanks) t.DrawShadows();
         
-        // Desenha a sombra do player (pra sobrepor os inimigos terrestres se estiver voando)
+        // Desenha a sombra do player
         player.DrawShadows();
     EndTextureMode();
 
@@ -157,6 +235,36 @@ void Game::Render()
     for (const auto& t : tanks) t.DrawBody();
     player.DrawBody();
     
+    // ETAPA 5: DESENHAR FUMAÇAS E EXPLOSÕES POR CIMA DE TUDO
+    for (const auto& t : tanks)
+    {
+        if (t.isDestroyed && smokeFrames[0].id != 0)
+        {
+            Texture2D sTex = smokeFrames[t.smokeFrame];
+            float sW = (float)sTex.width;
+            float sH = (float)sTex.height;
+            Rectangle sSource = { 0.0f, 0.0f, (float)sTex.width, (float)sTex.height };
+            // Fumaça deslocada um pouquinho pra cima e sempre sem rotação (0.0f)
+            Rectangle sDest = { t.position.x, t.position.y - 10.0f, sW, sH };
+            Vector2 sOrigin = { sW / 2.0f, sH / 2.0f };
+            DrawTexturePro(sTex, sSource, sDest, sOrigin, 0.0f, WHITE);
+        }
+    }
+    
+    for (const auto& ex : explosions)
+    {
+        Texture2D tex = expFrames[ex.currentFrame];
+        if (tex.id != 0)
+        {
+            float w = (float)tex.width * ex.scale;
+            float h = (float)tex.height * ex.scale;
+            Rectangle source = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
+            Rectangle dest = { ex.position.x, ex.position.y, w, h };
+            Vector2 origin = { w / 2.0f, h / 2.0f };
+            DrawTexturePro(tex, source, dest, origin, 0.0f, WHITE);
+        }
+    }
+
     // UI DA TELA (Textos, HUD, FPS sempre desenhados por ultimo e FORA da câmera)
     DrawFPS(10, 10);
 

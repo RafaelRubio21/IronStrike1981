@@ -13,6 +13,8 @@ public:
     
     // Passa o retângulo de colisão do inimigo, retorna true e remove a bala se acertou
     bool CheckBulletHits(Rectangle targetRect);
+    
+    Vector2 GetPosition() const { return position; }
 
 private:
     Vector2 position;

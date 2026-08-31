@@ -5,7 +5,7 @@ class Tank
 {
 public:
     void Initialize(Vector2 startPos, int spawnDirection); 
-    void Update(float deltaTime);
+    void Update(float deltaTime, Vector2 playerPos);
     void DrawShadows() const;
     void DrawBody() const;
     
@@ -21,6 +21,9 @@ public:
     float hitTimer; // Para piscar a tela quando toma tiro
     
     Vector2 position;
+    
+    int smokeFrame;
+    float smokeAnimTimer;
 
 private:
     Vector2 velocity;
@@ -29,4 +32,10 @@ private:
     float scale; // Permite aumentar ou diminuir o tanque
     int currentFrame;
     float frameTimer;
+    
+    int cannonFrame;
+    float cannonAnimTimer;
+    bool isCannonShooting;
+    float shootCooldown;
+    float cannonRotation;
 };

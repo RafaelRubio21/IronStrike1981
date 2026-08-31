@@ -5,17 +5,26 @@
 #include "Tank.h"
 #include <vector>
 
+struct Explosion {
+    Vector2 position;
+    int currentFrame;
+    float frameTimer;
+    float scale;
+};
+
 class Game
 {
 public:
     void Initialize();
     void Update(float deltaTime);
     void Render();
+    void Shutdown();
 
 private:
     Player player;
     
     std::vector<Tank> tanks;
+    std::vector<Explosion> explosions;
     float tankSpawnTimer;
     
     Camera2D camera;
