@@ -20,7 +20,7 @@ struct DustParticle {
 class Tank
 {
 public:
-    void Initialize(Vector2 startPos, int spawnDirection); 
+    void Initialize(Vector2 startPos, int spawnDirection, int tankType = 0); 
     void Update(float deltaTime, Vector2 playerPos);
     void DrawTracksAndDust() const;
     void DrawShadows() const;
@@ -34,10 +34,17 @@ public:
     bool isDestroyed;
     bool isActive;
     
+    int type; // Guarda o modelo do tanque
     int hp;
     float hitTimer; // Para piscar a tela quando toma tiro
     
     Vector2 position;
+    
+    // Status individuais do tanque (podem variar por tipo)
+    float speed;
+    float turretSpeed;
+    float cannonOffsetY;
+    float fireOffsetY; // Ajuste da ponta do canhão para o fogo
     
     int smokeFrame;
     float smokeAnimTimer;

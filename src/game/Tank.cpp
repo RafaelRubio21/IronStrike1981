@@ -2,30 +2,27 @@
 #include <cmath>
 
 // =================================================================
-// CONFIGURAÇÕES GERAIS DOS TANQUES (Fique à vontade para alterar!)
+// CONFIGURAÇÕES GERAIS DOS TANQUES (Apenas áudios e partículas)
 // =================================================================
-static int TANK_MAX_HP = 5;               // Tiros necessarios para destruir
-static float TANK_SPEED = 60.0f;          // Velocidade de movimento
 static float TANK_FRICTION = 150.0f;      // Força de frenagem ao ser destruido (derrapada)
-static float TANK_TURRET_SPEED = 20.0f;   // Velocidade de giro da torreta (graus por segundo)
 static float TANK_VOL_EXPLOSION = 0.5f;   // Volume da explosão (0.0 a 1.0)
 static float TANK_VOL_ENGINE = 0.15f;     // Volume do motor (0.0 a 1.0)
 static float TANK_VOL_SHOOTING = 0.4f;    // Volume do tiro inimigo (0.0 a 1.0)
-static float TANK_CANNON_OFFSET_Y = -25.0f; // Ajuste o encaixe do canhão (Pra frente / trás)
 
 // Configuração das Partículas (Poeira e Rastros)
 static float TANK_DUST_RATE = 0.05f;       // Frequencia que a poeira nasce (menor = mais denso)
 static float TANK_DUST_OFFSET = 20.0f;     // Distancia do centro do tanque até a lagarta (traseira)
 static float TANK_DUST_SPREAD = 15.0f;     // O quão caótico/largo é o espalhamento
-static float TANK_DUST_MIN_RADIUS = 1.0f;  // Tamanho inicial mínimo da poeira
-static float TANK_DUST_MAX_RADIUS = 2.0f; // Tamanho inicial máximo
+static float TANK_DUST_MIN_RADIUS = 4.0f;  // Tamanho inicial mínimo da poeira
+static float TANK_DUST_MAX_RADIUS = 10.0f; // Tamanho inicial máximo
 // =================================================================
 
-// Variáveis globais/estáticas para carregar texturas e áudios apenas uma vez
-static Texture2D tankFrames[4] = {0};
-static Texture2D tankDestroyedFrame = {0};
-static Texture2D cannonFrames[3] = {0};
-static Texture2D cannonDestroyedFrame = {0};
+// Suporte para 2 modelos de tanque (0 = Normal, 1 = Pesado)
+static Texture2D tankFrames[2][4] = {0};
+static Texture2D tankDestroyedFrame[2] = {0};
+static Texture2D cannonFrames[2][3] = {0};
+static Texture2D cannonDestroyedFrame[2] = {0};
+static Texture2D fireFrames[2][3] = {0};
 static bool tankTexturesLoaded = false;
 
 static Sound tankExplodingSnd = {0};
@@ -33,44 +30,62 @@ static Sound tankMovingSnd = {0};
 static Sound tankShootingSnd = {0};
 static bool tankAudioLoaded = false;
 
-void Tank::Initialize(Vector2 startPos, int spawnDirection)
+void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType)
 {
+    type = tankType;
     position = startPos;
     isDestroyed = false;
     isActive = true;
     
-    scale = 1.0f; // 1.0 = Tamanho original de 67x94
+    // Status Individuais por Modelo
+    if (type == 0) // Normal (Original)
+    {
+        speed = 60.0f;
+        turretSpeed = 20.0f;
+        hp = 5;
+        cannonOffsetY = -25.0f;
+        fireOffsetY = -110.0f; // Ajuste livremente esse valor! (Negativo = mais pra ponta do cano)
+        scale = 1.0f; 
+    }
+    else // Tipo 1: Exemplo Pesado
+    {
+        speed = 30.0f;
+        turretSpeed = 10.0f;
+        hp = 12;
+        cannonOffsetY = -25.0f;
+        fireOffsetY = -50.0f;
+        scale = 1.0f;
+    }
+    
     currentFrame = 0;
     frameTimer = 0.0f;
     
     cannonFrame = 0;
     cannonAnimTimer = 0.0f;
     isCannonShooting = false;
-    shootCooldown = (float)GetRandomValue(20, 50) / 10.0f; // 2 a 5 segundos pro primeiro tiro
+    shootCooldown = (float)GetRandomValue(20, 50) / 10.0f; 
     
-    hp = TANK_MAX_HP; 
     hitTimer = 0.0f;
     
     // O Sprite aponta nativamente para BAIXO
     if (spawnDirection == 0)
     {
-        velocity = { 0.0f, TANK_SPEED }; // Desce
+        velocity = { 0.0f, speed };
         rotation = 0.0f;
     }
     else if (spawnDirection == 1)
     {
-        velocity = { TANK_SPEED, 0.0f }; // Vai pra direita
-        rotation = -90.0f; // Vira pra direita
+        velocity = { speed, 0.0f };
+        rotation = -90.0f;
     }
     else if (spawnDirection == 2)
     {
-        velocity = { -TANK_SPEED, 0.0f }; // Vai pra esquerda
-        rotation = 90.0f; // Vira pra esquerda
+        velocity = { -speed, 0.0f };
+        rotation = 90.0f;
     }
     
-    cannonRotation = rotation; // O canhão nasce alinhado com o chassi
+    cannonRotation = rotation;
     
-    // Inicia a animação da fumaça em um frame aleatório para não sincronizar com outros tanques!
     smokeFrame = GetRandomValue(0, 6);
     smokeAnimTimer = 0.0f;
     
@@ -81,27 +96,37 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection)
     
     if (!tankTexturesLoaded)
     {
-        // Arrays com os possíveis caminhos de diretório para o Visual Studio
-        const char* paths[] = {
-            "assets/sprites/enemies/tank/",
-            "../../assets/sprites/enemies/tank/",
-            "../../../assets/sprites/enemies/tank/"
+        const char* basePaths[] = {
+            "assets/sprites/enemies/",
+            "../../assets/sprites/enemies/",
+            "../../../assets/sprites/enemies/"
+        };
+        const char* typeFolders[] = {
+            "tank/",     // Tipo 0 (Pasta renomeada)
+            "tank_heavy/"  // Tipo 1 (Pode ser qualquer pasta que você criar)
         };
         
-        for (int i = 0; i < 3; i++)
+        for (int p = 0; p < 3; p++)
         {
-            if (tankFrames[0].id == 0) // Se ainda nao achou
+            if (tankFrames[0][0].id == 0)
             {
-                tankFrames[0] = LoadTexture(TextFormat("%stank1.png", paths[i]));
-                tankFrames[1] = LoadTexture(TextFormat("%stank2.png", paths[i]));
-                tankFrames[2] = LoadTexture(TextFormat("%stank3.png", paths[i]));
-                tankFrames[3] = LoadTexture(TextFormat("%stank4.png", paths[i]));
-                tankDestroyedFrame = LoadTexture(TextFormat("%stank_destroyed.png", paths[i]));
-                
-                cannonFrames[0] = LoadTexture(TextFormat("%sturret1.png", paths[i]));
-                cannonFrames[1] = LoadTexture(TextFormat("%sturret2.png", paths[i]));
-                cannonFrames[2] = LoadTexture(TextFormat("%sturret3.png", paths[i]));
-                cannonDestroyedFrame = LoadTexture(TextFormat("%sturret_destroyed.png", paths[i]));
+                for (int t = 0; t < 2; t++) // Para cada modelo
+                {
+                    tankFrames[t][0] = LoadTexture(TextFormat("%s%stank1.png", basePaths[p], typeFolders[t]));
+                    tankFrames[t][1] = LoadTexture(TextFormat("%s%stank2.png", basePaths[p], typeFolders[t]));
+                    tankFrames[t][2] = LoadTexture(TextFormat("%s%stank3.png", basePaths[p], typeFolders[t]));
+                    tankFrames[t][3] = LoadTexture(TextFormat("%s%stank4.png", basePaths[p], typeFolders[t]));
+                    tankDestroyedFrame[t] = LoadTexture(TextFormat("%s%stank_destroyed.png", basePaths[p], typeFolders[t]));
+                    
+                    cannonFrames[t][0] = LoadTexture(TextFormat("%s%sturret1.png", basePaths[p], typeFolders[t]));
+                    cannonFrames[t][1] = LoadTexture(TextFormat("%s%sturret2.png", basePaths[p], typeFolders[t]));
+                    cannonFrames[t][2] = LoadTexture(TextFormat("%s%sturret3.png", basePaths[p], typeFolders[t]));
+                    cannonDestroyedFrame[t] = LoadTexture(TextFormat("%s%sturret_destroyed.png", basePaths[p], typeFolders[t]));
+                    
+                    fireFrames[t][0] = LoadTexture(TextFormat("%s%sfire1.png", basePaths[p], typeFolders[t]));
+                    fireFrames[t][1] = LoadTexture(TextFormat("%s%sfire2.png", basePaths[p], typeFolders[t]));
+                    fireFrames[t][2] = LoadTexture(TextFormat("%s%sfire3.png", basePaths[p], typeFolders[t]));
+                }
             }
         }
         tankTexturesLoaded = true;
@@ -152,6 +177,8 @@ void Tank::Destroy()
     if (!isDestroyed)
     {
         isDestroyed = true;
+        isCannonShooting = false; // Corta o fogo do canhão imediatamente
+        cannonFrame = 0;
         
         // Toca o som de explosão ao ser destruído
         if (tankExplodingSnd.frameCount != 0) PlaySound(tankExplodingSnd);
@@ -197,9 +224,17 @@ void Tank::Update(float deltaTime, Vector2 playerPos)
     
     if (hitTimer > 0.0f) hitTimer -= deltaTime;
     
+    // Lógica da Parada Estratégica
+    // O tanque "pisa no freio" 0.5 segundos antes de atirar para mirar, e fica parado enquanto o tiro sai
+    bool isAiming = (!isCannonShooting && shootCooldown <= 0.5f);
+    float speedMult = (isAiming || isCannonShooting) ? 0.0f : 1.0f;
+    
+    float curVelX = velocity.x * speedMult;
+    float curVelY = velocity.y * speedMult;
+
     // Movimento
-    position.x += velocity.x * deltaTime;
-    position.y += velocity.y * deltaTime;
+    position.x += curVelX * deltaTime;
+    position.y += curVelY * deltaTime;
     
     // Atualiza vida das partículas
     for (int i = 0; i < tracks.size(); i++) {
@@ -216,7 +251,7 @@ void Tank::Update(float deltaTime, Vector2 playerPos)
     }
     
     // Spawna partículas se o tanque estiver se movendo rápido o suficiente
-    //float speedSqr = (velocity.x * velocity.x) + (velocity.y * velocity.y);
+    float speedSqr = (curVelX * curVelX) + (curVelY * curVelY);
     //if (speedSqr > 10.0f)
     //{
         /* --- EFEITOS DESATIVADOS (Para uso no futuro) ---
@@ -290,7 +325,8 @@ void Tank::Update(float deltaTime, Vector2 playerPos)
         if (diff > 180.0f) diff -= 360.0f;
         if (diff < -180.0f) diff += 360.0f;
         
-        float turnSpeed = TANK_TURRET_SPEED * deltaTime;
+        // Interpola a rotação do canhão para o alvo suavemente
+        float turnSpeed = turretSpeed * deltaTime;
         if (fabs(diff) < turnSpeed) cannonRotation = targetAngle;
         else if (diff > 0.0f) cannonRotation += turnSpeed;
         else cannonRotation -= turnSpeed;
@@ -360,37 +396,35 @@ void Tank::DrawShadows() const
 {
     if (!isActive || !tankTexturesLoaded) return;
     
-    Texture2D tex = isDestroyed ? tankDestroyedFrame : tankFrames[currentFrame];
-    
-    float width = (float)tex.width * scale;
-    float height = (float)tex.height * scale;
-    
-    Rectangle sourceRec = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
+    Color shadowColor = { 0, 0, 0, 100 }; // Sombra preta transparente
     
     // Sombra do corpo
-    Vector2 shadowOffset = { 8.0f * scale, 8.0f * scale };
-    Rectangle destRec = { position.x + shadowOffset.x, position.y + shadowOffset.y, width, height };
-    Vector2 origin = { width / 2.0f, height / 2.0f };
-    
-    DrawTexturePro(tex, sourceRec, destRec, origin, rotation, BLACK);
-    
-    // Sombra do Canhão
-    if (cannonFrames[0].id != 0)
+    Texture2D tTex = isDestroyed ? tankDestroyedFrame[type] : tankFrames[type][currentFrame];
+    if (tTex.id != 0)
     {
-        Texture2D cTex = isDestroyed ? cannonDestroyedFrame : cannonFrames[cannonFrame];
+        float w = (float)tTex.width * scale;
+        float h = (float)tTex.height * scale;
+        Rectangle source = { 0.0f, 0.0f, (float)tTex.width, (float)tTex.height };
+        Rectangle dest = { position.x + (8.0f * scale), position.y + (8.0f * scale), w, h };
+        Vector2 origin = { w / 2.0f, h / 2.0f };
+        
+        DrawTexturePro(tTex, source, dest, origin, rotation, shadowColor);
+    }
+    
+    // Sombra do canhão
+    Texture2D cTex = isDestroyed ? cannonDestroyedFrame[type] : cannonFrames[type][cannonFrame];
+    if (cTex.id != 0)
+    {
         float cWidth = (float)cTex.width * scale;
         float cHeight = (float)cTex.height * scale;
         Rectangle cSource = { 0.0f, 0.0f, (float)cTex.width, (float)cTex.height };
         
-        // Canhão é mais alto, então a sombra é projetada um pouquinho mais longe
-        // Se estiver destruído, a sombra "cai" pro chão (mesma altura da carcaça)
-        Vector2 cShadowOffset = isDestroyed ? shadowOffset : Vector2{ 12.0f * scale, 12.0f * scale };
-        Rectangle cDest = { position.x + cShadowOffset.x, position.y + cShadowOffset.y, cWidth, cHeight };
+        // A sombra do canhão fica um pouco mais alta (deslocamento maior) se ele estiver inteiro
+        float shadowDistance = isDestroyed ? (8.0f * scale) : (12.0f * scale);
+        Rectangle cDest = { position.x + shadowDistance, position.y + shadowDistance, cWidth, cHeight };
         
-        // Aplica o ajuste fino de encaixe preservando a rotação local
-        Vector2 cOrigin = { cWidth / 2.0f, (cHeight / 2.0f) + (TANK_CANNON_OFFSET_Y * scale) };
-        
-        DrawTexturePro(cTex, cSource, cDest, cOrigin, cannonRotation, BLACK);
+        Vector2 cOrigin = { cWidth / 2.0f, (cHeight / 2.0f) + (cannonOffsetY * scale) };
+        DrawTexturePro(cTex, cSource, cDest, cOrigin, cannonRotation, shadowColor);
     }
 }
 
@@ -398,34 +432,66 @@ void Tank::DrawBody() const
 {
     if (!isActive || !tankTexturesLoaded) return;
     
-    Texture2D tex = isDestroyed ? tankDestroyedFrame : tankFrames[currentFrame];
-    
-    float width = (float)tex.width * scale;
-    float height = (float)tex.height * scale;
-    
-    Rectangle sourceRec = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
-    Rectangle destRec = { position.x, position.y, width, height };
-    Vector2 origin = { width / 2.0f, height / 2.0f };
-    
-    // Se tomou um tiro recentemente, pisca de vermelho!
-    Color tintColor = (hitTimer > 0.0f && !isDestroyed) ? RED : WHITE;
-    
-    DrawTexturePro(tex, sourceRec, destRec, origin, rotation, tintColor);
-    
-    // Canhão (Desenhado por cima do corpo)
-    if (cannonFrames[0].id != 0)
+    // Corpo
+    Texture2D tex = isDestroyed ? tankDestroyedFrame[type] : tankFrames[type][currentFrame];
+    if (tex.id != 0)
     {
-        Texture2D cTex = isDestroyed ? cannonDestroyedFrame : cannonFrames[cannonFrame];
+        float width = (float)tex.width * scale;
+        float height = (float)tex.height * scale;
+        
+        Rectangle sourceRec = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
+        Rectangle destRec = { position.x, position.y, width, height };
+        Vector2 origin = { width / 2.0f, height / 2.0f };
+        
+        Color tintColor = WHITE;
+        if (hitTimer > 0.0f && !isDestroyed) {
+            tintColor = RED;
+        }
+        
+        DrawTexturePro(tex, sourceRec, destRec, origin, rotation, isDestroyed ? WHITE : tintColor);
+    }
+    
+    // Canhão
+    Texture2D cTex = isDestroyed ? cannonDestroyedFrame[type] : cannonFrames[type][cannonFrame];
+    if (cTex.id != 0)
+    {
         float cWidth = (float)cTex.width * scale;
         float cHeight = (float)cTex.height * scale;
         Rectangle cSource = { 0.0f, 0.0f, (float)cTex.width, (float)cTex.height };
         Rectangle cDest = { position.x, position.y, cWidth, cHeight };
+        Vector2 cOrigin = { cWidth / 2.0f, (cHeight / 2.0f) + (cannonOffsetY * scale) };
         
-        // Aplica o ajuste fino de encaixe preservando a rotação local
-        Vector2 cOrigin = { cWidth / 2.0f, (cHeight / 2.0f) + (TANK_CANNON_OFFSET_Y * scale) };
+        Color tintColor = WHITE;
+        if (hitTimer > 0.0f && !isDestroyed) {
+            tintColor = RED;
+        }
         
-        // Se tomou tiro, o canhão também deve piscar junto com o corpo
-        // Se destruído, a cor natural da imagem destruída prevalece (WHITE)
         DrawTexturePro(cTex, cSource, cDest, cOrigin, cannonRotation, isDestroyed ? WHITE : tintColor);
+        
+        // Desenha o Tiro (Fogo na ponta do canhão) se estiver atirando E não estiver destruído
+        if (!isDestroyed && isCannonShooting && fireFrames[type][0].id != 0)
+        {
+            // O tiro dura 0.2 segundos (cannonAnimTimer zera no 0.1)
+            // Se cannonFrame == 1, se passou de 0 a 0.1s
+            // Se cannonFrame == 2, se passou de 0.1 a 0.2s
+            float elapsed = (cannonFrame == 1 ? 0.0f : 0.1f) + cannonAnimTimer;
+            int fIndex = (int)(elapsed / (0.2f / 3.0f));
+            if (fIndex > 2) fIndex = 2; // clamp de segurança
+            
+            Texture2D fTex = fireFrames[type][fIndex];
+            if (fTex.id != 0)
+            {
+                float fWidth = (float)fTex.width * scale;
+                float fHeight = (float)fTex.height * scale;
+                Rectangle fSource = { 0.0f, 0.0f, (float)fTex.width, (float)fTex.height };
+                Rectangle fDest = { position.x, position.y, fWidth, fHeight };
+                
+                // MAGIA AQUI: O Raylib rotaciona automaticamente usando o offset de origem!
+                // É só mudar o fireOffsetY lá em cima pra empurrar a imagem pra ponta.
+                Vector2 fOrigin = { fWidth / 2.0f, (fHeight / 2.0f) + (fireOffsetY * scale) };
+                
+                DrawTexturePro(fTex, fSource, fDest, fOrigin, cannonRotation, WHITE);
+            }
+        }
     }
 }
