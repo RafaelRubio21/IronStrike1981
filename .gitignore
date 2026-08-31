@@ -1,0 +1,10 @@
+﻿# Build and IDE
+build/
+out/
+.vs/
+.vscode/
+*.user
+*.suo
+CMakeSettings.json
+CMakeCache.txt
+CMakeFiles/
