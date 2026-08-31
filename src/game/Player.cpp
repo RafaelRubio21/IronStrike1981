@@ -37,7 +37,11 @@ void Player::Initialize(Vector2 startPos)
     isShooting = false;
     mgCurrentFrame = 0;
     mgFrameTimer = 0.0f;
-    mgOffsetY = -112.0f; // Ajuste fino pro bico do helicoptero
+    mgOffsetY = -114.0f; // Ajuste fino pro bico do helicoptero
+
+    bullets.clear();
+    bulletSpeed = 1200.0f; // Velocidade da bolinha
+    mgFireRate = 0.08f;    // O intervalo entre um tiro e outro (quanto menor, mais rapido atira)
 
     machineGunSprite = LoadTexture("assets/sprites/helicopter/machine_gun.png");
     if (machineGunSprite.id == 0) machineGunSprite = LoadTexture("../../assets/sprites/helicopter/machine_gun.png");
@@ -62,7 +66,21 @@ void Player::Initialize(Vector2 startPos)
     if (engineStartingSound.frameCount != 0) SetSoundVolume(engineStartingSound, 0.3f); // 30%
     if (engineLoopMusic.frameCount != 0) SetMusicVolume(engineLoopMusic, 0.3f); // 30%
 
-    // O timer vai segurar a inicializacao do motor por meio segundo (0.5f)
+    // Carrega os sons da arma
+    wasShooting = false;
+    
+    mgShootSound = LoadSound("assets/audio/helicopter/machine_gun.ogg");
+    if (mgShootSound.frameCount == 0) mgShootSound = LoadSound("../../assets/audio/helicopter/machine_gun.ogg");
+    if (mgShootSound.frameCount == 0) mgShootSound = LoadSound("../../../assets/audio/helicopter/machine_gun.ogg");
+
+    mgFinalShotSound = LoadSound("assets/audio/helicopter/machine_gun_final_shot.ogg");
+    if (mgFinalShotSound.frameCount == 0) mgFinalShotSound = LoadSound("../../assets/audio/helicopter/machine_gun_final_shot.ogg");
+    if (mgFinalShotSound.frameCount == 0) mgFinalShotSound = LoadSound("../../../assets/audio/helicopter/machine_gun_final_shot.ogg");
+
+    if (mgShootSound.frameCount != 0) SetSoundVolume(mgShootSound, 0.5f);
+    if (mgFinalShotSound.frameCount != 0) SetSoundVolume(mgFinalShotSound, 0.5f);
+
+    // O timer vai segurar a inicializacao do motor por meio segundo
     engineStartDelayTimer = 1.5f; 
 }
 
@@ -156,22 +174,50 @@ void Player::Update(float deltaTime)
         if (isShooting && hasMachineGun)
         {
             mgFrameTimer += deltaTime;
-            if (mgFrameTimer >= 0.05f) // 20 Quadros por segundo (bem rapido)
+            // Cria uma bala e roda a animacao a cada mgFireRate segundos
+            if (mgFrameTimer >= mgFireRate) 
             {
                 mgFrameTimer = 0.0f;
                 mgCurrentFrame++;
                 
-                // Acha o limite de frames dividindo a largura total da imagem por 16 (tamanho do quadro)
                 int maxFrames = machineGunSprite.width / 16;
                 if (maxFrames <= 0) maxFrames = 1;
 
                 if (mgCurrentFrame >= maxFrames) mgCurrentFrame = 0;
+
+                // Spawna a bolinha bem na ponta do bico
+                bullets.push_back({ position.x, position.y + (mgOffsetY * scale) });
+                
+                // Dispara o som a cada bala criada!
+                if (mgShootSound.frameCount != 0) PlaySound(mgShootSound);
             }
         }
         else
         {
             mgCurrentFrame = 0; // Desliga a animacao se soltar o botão
             isShooting = false;
+        }
+
+        // Detecta exatamente o momento em que a tecla foi SOLTA
+        if (wasShooting && !isShooting)
+        {
+            // Toca o som de eco/cauda do ultimo tiro
+            if (mgFinalShotSound.frameCount != 0) PlaySound(mgFinalShotSound);
+        }
+        
+        // Guarda o estado para o proximo frame
+        wasShooting = isShooting;
+    }
+
+    // Atualiza a posicao de todos os tiros criados
+    for (int i = 0; i < bullets.size(); i++)
+    {
+        bullets[i].y -= bulletSpeed * deltaTime; // Tiro sobe a tela
+        
+        if (bullets[i].y < -50) // Se saiu da tela por cima, apaga da memoria
+        {
+            bullets.erase(bullets.begin() + i);
+            i--; 
         }
     }
 }
@@ -263,5 +309,14 @@ void Player::Render() const
     else
     {
         DrawCircle(position.x, position.y - 15.0f, 10, DARKGRAY); 
+    }
+
+    // -------------------------------------------------------------
+    // ETAPA 5: DESENHA AS BALAS (Temporário)
+    // -------------------------------------------------------------
+    for (const auto& b : bullets)
+    {
+        // Uma bolinha amarela incandescente simulando projétil
+        DrawCircleV(b, 4.0f, YELLOW);
     }
 }

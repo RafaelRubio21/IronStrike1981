@@ -1,6 +1,7 @@
 #pragma once
 
 #include "raylib.h"
+#include <vector>
 
 class Player
 {
@@ -31,6 +32,10 @@ private:
     float mgFrameTimer;
     float mgOffsetY; // Distancia para o nariz do helicoptero
     
+    std::vector<Vector2> bullets; // Municao ativa na tela
+    float bulletSpeed;
+    float mgFireRate; // Frequencia dos tiros (em segundos)
+    
     float rotorRotation; // Angulo atual de giro em graus
     float currentRotorSpeed; // Velocidade atual de giro
     float targetRotorSpeed; // Velocidade maxima
@@ -42,4 +47,8 @@ private:
     Music engineLoopMusic;
     bool engineLoopActive;
     float engineStartDelayTimer;
+    
+    Sound mgShootSound;
+    Sound mgFinalShotSound;
+    bool wasShooting;
 };
