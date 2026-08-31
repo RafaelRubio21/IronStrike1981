@@ -34,6 +34,25 @@ void Game::Initialize()
         SetMusicVolume(bgMusic, bgMusicVolume);
         PlayMusicStream(bgMusic);
     }
+    
+    // Carrega os Sons de Impacto Metálico
+    const char* audioPaths[] = {
+        "assets/audio/metal_impact/",
+        "../../assets/audio/metal_impact/",
+        "../../../assets/audio/metal_impact/"
+    };
+    
+    for (int i = 0; i < 5; i++)
+    {
+        impactSounds[i].frameCount = 0; // Zera para segurança
+        for (int p = 0; p < 3; p++)
+        {
+            if (impactSounds[i].frameCount == 0)
+            {
+                impactSounds[i] = LoadSound(TextFormat("%simpact%d.ogg", audioPaths[p], i + 1));
+            }
+        }
+    }
 }
 
 void Game::Update(float deltaTime)
@@ -86,7 +105,15 @@ void Game::Update(float deltaTime)
         {
             if (player.CheckBulletHits(tanks[i].GetHitbox()))
             {
-                tanks[i].Destroy(); // Destrói o tanque! (Toca animação/som no futuro)
+                tanks[i].TakeDamage(1); // Arranca 1 de HP por bala
+                
+                // Escolhe 1 dos 5 sons de impacto aleatoriamente
+                int randSfx = GetRandomValue(0, 4);
+                if (impactSounds[randSfx].frameCount != 0)
+                {
+                    SetSoundVolume(impactSounds[randSfx], 0.7f);
+                    PlaySound(impactSounds[randSfx]);
+                }
             }
         }
         

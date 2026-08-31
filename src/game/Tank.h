@@ -11,10 +11,14 @@ public:
     
     Rectangle GetHitbox() const;
     
+    void TakeDamage(int damage);
     void Destroy();
 
     bool isDestroyed;
     bool isActive;
+    
+    int hp;
+    float hitTimer; // Para piscar a tela quando toma tiro
     
     Vector2 position;
 

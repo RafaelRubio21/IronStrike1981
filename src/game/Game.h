@@ -26,5 +26,7 @@ private:
     float bgMusicVolume;
     float bgMusicTargetVolume;
     
+    Sound impactSounds[5]; // Sons genericos de metal
+    
     RenderTexture2D globalShadowTarget; // O grande canvas global de sombras unificadas!
 };
