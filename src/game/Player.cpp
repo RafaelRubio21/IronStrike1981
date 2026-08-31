@@ -77,7 +77,7 @@ void Player::Initialize(Vector2 startPos)
     if (mgShootSound.frameCount != 0) SetSoundVolume(mgShootSound, 0.5f);
     if (mgFinalShotSound.frameCount != 0) SetSoundVolume(mgFinalShotSound, 0.5f);
 
-    // O timer vai segurar a inicializacao do motor por meio segundo
+    // O timer vai segurar a inicializacao do motor por meio segundo (0.5f)
     engineStartDelayTimer = 1.5f; 
 }
 
@@ -219,6 +219,22 @@ void Player::Update(float deltaTime)
     }
 }
 
+bool Player::CheckBulletHits(Rectangle targetRect)
+{
+    for (int i = 0; i < bullets.size(); i++)
+    {
+        // A bala é um projetil fino e alto. Criamos uma hitbox para ela
+        Rectangle bulletRect = { bullets[i].x - 2.0f, bullets[i].y - 15.0f, 4.0f, 15.0f };
+        
+        if (CheckCollisionRecs(bulletRect, targetRect))
+        {
+            bullets.erase(bullets.begin() + i); // Apaga a bala da array (ela explode no tanque)
+            return true; // Acertou!
+        }
+    }
+    return false;
+}
+
 void Player::DrawShadows() const
 {
     float altitude = scale - 0.6f;
@@ -296,11 +312,17 @@ void Player::DrawBody() const
     }
 
     // -------------------------------------------------------------
-    // ETAPA 5: DESENHA AS BALAS (Temporário)
+    // ETAPA 5: DESENHA AS BALAS (Efeito Tracer / Rajada incandescente)
     // -------------------------------------------------------------
     for (const auto& b : bullets)
     {
-        // Uma bolinha amarela incandescente simulando projétil
-        DrawCircleV(b, 4.0f, YELLOW);
+        // 1. Rastro da bala (uma linha que simula a velocidade)
+        DrawLineEx({b.x, b.y + 15.0f}, {b.x, b.y}, 3.0f, Fade(ORANGE, 0.6f));
+        
+        // 2. Ponta da bala (brilho amarelo)
+        DrawCircleV(b, 2.5f, YELLOW);
+        
+        // 3. Núcleo ultra-quente da bala (branco puro)
+        DrawCircleV(b, 1.0f, WHITE);
     }
 }

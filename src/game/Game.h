@@ -2,6 +2,8 @@
 
 #include "raylib.h"
 #include "Player.h"
+#include "Tank.h"
+#include <vector>
 
 class Game
 {
@@ -12,6 +14,10 @@ public:
 
 private:
     Player player;
+    
+    std::vector<Tank> tanks;
+    float tankSpawnTimer;
+    
     Camera2D camera;
     float levelScrollY; // O mapa desce, dando a ilusao de voar para cima
     float scrollSpeed;

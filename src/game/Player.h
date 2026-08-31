@@ -10,6 +10,9 @@ public:
     void Update(float deltaTime);
     void DrawShadows() const; // Fase 1 do render
     void DrawBody() const;    // Fase 2 do render
+    
+    // Passa o retângulo de colisão do inimigo, retorna true e remove a bala se acertou
+    bool CheckBulletHits(Rectangle targetRect);
 
 private:
     Vector2 position;

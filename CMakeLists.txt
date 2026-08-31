@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.20)
 project(IronStrike1981 CXX)
 
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
@@ -19,6 +19,7 @@ add_executable(IronStrike1981
     src/main.cpp
     src/game/Game.cpp
     src/game/Player.cpp
+    src/game/Tank.cpp
 )
 
 target_include_directories(IronStrike1981 PRIVATE src)
