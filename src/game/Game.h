@@ -19,4 +19,6 @@ private:
     Music bgMusic; // Musica de Fundo
     float bgMusicVolume;
     float bgMusicTargetVolume;
+    
+    RenderTexture2D globalShadowTarget; // O grande canvas global de sombras unificadas!
 };

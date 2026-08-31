@@ -8,7 +8,8 @@ class Player
 public:
     void Initialize(Vector2 startPos);
     void Update(float deltaTime);
-    void Render() const;
+    void DrawShadows() const; // Fase 1 do render
+    void DrawBody() const;    // Fase 2 do render
 
 private:
     Vector2 position;
@@ -18,8 +19,6 @@ private:
     
     Texture2D sprite; // Corpo do helicoptero
     bool hasSprite;
-    
-    RenderTexture2D shadowTarget; // Buffer para unificar a sombra e evitar sobreposição
 
     Texture2D rotorSprite; // Helice
     bool hasRotor;

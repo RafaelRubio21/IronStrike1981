@@ -11,9 +11,6 @@ void Player::Initialize(Vector2 startPos)
     hasRotor = false;
     rotorOffsetY = -28.0f; // Valor ideal definido pelo jogador
     
-    // Inicia um Framebuffer para juntar as sombras sem sobrepor a transparencia
-    shadowTarget = LoadRenderTexture(1024, 768);
-
     rotorRotation = 0.0f;
     currentRotorSpeed = 0.0f; // Comeca totalmente parada
     targetRotorSpeed = 1500.0f; // Velocidade final alvo
@@ -222,48 +219,35 @@ void Player::Update(float deltaTime)
     }
 }
 
-void Player::Render() const
+void Player::DrawShadows() const
 {
     float altitude = scale - 0.6f;
     float shadowDistance = 15.0f + (altitude * 100.0f); 
     Vector2 shadowOffset = { shadowDistance, shadowDistance }; 
 
-    // -------------------------------------------------------------
-    // ETAPA 1: DESENHA AS SOMBRAS OPACAS NO FRAMEBUFFER
-    // -------------------------------------------------------------
-    BeginTextureMode(shadowTarget);
-        ClearBackground(BLANK); // Limpa o fundo do buffer com alfa 0
+    if (hasSprite)
+    {
+        Vector2 shadowDrawPos = { 
+            position.x + shadowOffset.x - (sprite.width * scale) / 2.0f, 
+            position.y + shadowOffset.y - (sprite.height * scale) / 2.0f 
+        };
+        // Atenção: O Alpha quem controla agora é o Game.cpp no Framebuffer Global
+        // Aqui desenhamos preto 100% solido (BLACK)
+        DrawTextureEx(sprite, shadowDrawPos, 0.0f, scale, BLACK);
+    }
 
-        if (hasSprite)
-        {
-            Vector2 shadowDrawPos = { 
-                position.x + shadowOffset.x - (sprite.width * scale) / 2.0f, 
-                position.y + shadowOffset.y - (sprite.height * scale) / 2.0f 
-            };
-            DrawTextureEx(sprite, shadowDrawPos, 0.0f, scale, BLACK);
-        }
+    if (hasRotor)
+    {
+        Rectangle sourceRec = { 0.0f, 0.0f, (float)rotorSprite.width, (float)rotorSprite.height };
+        Vector2 origin = { (rotorSprite.width * scale) / 2.0f, (rotorSprite.height * scale) / 2.0f };
+        Rectangle shadowDestRec = { position.x + shadowOffset.x, position.y + shadowOffset.y + (rotorOffsetY * scale), rotorSprite.width * scale, rotorSprite.height * scale };
+        
+        DrawTexturePro(rotorSprite, sourceRec, shadowDestRec, origin, rotorRotation, BLACK);
+    }
+}
 
-        if (hasRotor)
-        {
-            Rectangle sourceRec = { 0.0f, 0.0f, (float)rotorSprite.width, (float)rotorSprite.height };
-            Vector2 origin = { (rotorSprite.width * scale) / 2.0f, (rotorSprite.height * scale) / 2.0f };
-            Rectangle shadowDestRec = { position.x + shadowOffset.x, position.y + shadowOffset.y + (rotorOffsetY * scale), rotorSprite.width * scale, rotorSprite.height * scale };
-            
-            DrawTexturePro(rotorSprite, sourceRec, shadowDestRec, origin, rotorRotation, BLACK);
-        }
-    EndTextureMode();
-
-    // -------------------------------------------------------------
-    // ETAPA 2: DESENHA A SOMBRA UNIFICADA NA TELA (com 50% de transparencia)
-    // -------------------------------------------------------------
-    // Em OpenGL a textura renderizada fica de cabeca para baixo, por isso a altura do sourceRec é negativa!
-    Rectangle sourceRecTarget = { 0.0f, 0.0f, (float)shadowTarget.texture.width, -(float)shadowTarget.texture.height };
-    Rectangle destRecTarget = { 0.0f, 0.0f, (float)shadowTarget.texture.width, (float)shadowTarget.texture.height };
-    
-    // A mágica é que aplicamos a transparência ({255, 255, 255, 120}) na "foto" inteira, não peça por peça
-    DrawTexturePro(shadowTarget.texture, sourceRecTarget, destRecTarget, { 0.0f, 0.0f }, 0.0f, { 255, 255, 255, 40 });
-
-
+void Player::DrawBody() const
+{
     // -------------------------------------------------------------
     // ETAPA 3: DESENHA O HELICOPTERO REAL POR CIMA
     // -------------------------------------------------------------
