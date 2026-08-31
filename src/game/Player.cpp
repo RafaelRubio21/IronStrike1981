@@ -46,7 +46,7 @@ void Player::Initialize(Vector2 startPos)
     if (engineLoopMusic.frameCount != 0) SetMusicVolume(engineLoopMusic, 0.3f); // 30%
 
     // O timer vai segurar a inicializacao do motor por meio segundo (0.5f)
-    engineStartDelayTimer = 0.5f; 
+    engineStartDelayTimer = 1.5f; 
 }
 
 void Player::Update(float deltaTime)
@@ -92,7 +92,7 @@ void Player::Update(float deltaTime)
         {
             if (scale < 1.0f)
             {
-                scale += 0.1f * deltaTime; // Sobe suavemente (leva ~1.3 segundos para ir de 0.6 a 1.0)
+                scale += 0.1f * deltaTime; // Sobe suavemente
                 if (scale > 1.0f) scale = 1.0f;
             }
         }
