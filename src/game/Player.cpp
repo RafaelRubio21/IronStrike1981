@@ -9,6 +9,11 @@ void Player::Initialize(Vector2 startPos)
     
     hasSprite = false;
     hasRotor = false;
+    rotorOffsetY = -28.0f; // Valor ideal definido pelo jogador
+    
+    // Inicia um Framebuffer para juntar as sombras sem sobrepor a transparencia
+    shadowTarget = LoadRenderTexture(1024, 768);
+
     rotorRotation = 0.0f;
     currentRotorSpeed = 0.0f; // Comeca totalmente parada
     targetRotorSpeed = 1500.0f; // Velocidade final alvo
@@ -16,16 +21,28 @@ void Player::Initialize(Vector2 startPos)
     scale = 0.5f; // Comeca no chao (menor)
     
     // Carrega o Corpo
-    sprite = LoadTexture("assets/sprites/helicopter.png");
-    if (sprite.id == 0) sprite = LoadTexture("../../assets/sprites/helicopter.png");
-    if (sprite.id == 0) sprite = LoadTexture("../../../assets/sprites/helicopter.png");
+    sprite = LoadTexture("assets/sprites/helicopter/helicopter.png");
+    if (sprite.id == 0) sprite = LoadTexture("../../assets/sprites/helicopter/helicopter.png");
+    if (sprite.id == 0) sprite = LoadTexture("../../../assets/sprites/helicopter/helicopter.png");
     if (sprite.id != 0) hasSprite = true;
 
     // Carrega a Helice
-    rotorSprite = LoadTexture("assets/sprites/helice.png");
-    if (rotorSprite.id == 0) rotorSprite = LoadTexture("../../assets/sprites/helice.png");
-    if (rotorSprite.id == 0) rotorSprite = LoadTexture("../../../assets/sprites/helice.png");
+    rotorSprite = LoadTexture("assets/sprites/helicopter/helice.png");
+    if (rotorSprite.id == 0) rotorSprite = LoadTexture("../../assets/sprites/helicopter/helice.png");
+    if (rotorSprite.id == 0) rotorSprite = LoadTexture("../../../assets/sprites/helicopter/helice.png");
     if (rotorSprite.id != 0) hasRotor = true;
+
+    // Carrega o Fogo da Metralhadora
+    hasMachineGun = false;
+    isShooting = false;
+    mgCurrentFrame = 0;
+    mgFrameTimer = 0.0f;
+    mgOffsetY = -112.0f; // Ajuste fino pro bico do helicoptero
+
+    machineGunSprite = LoadTexture("assets/sprites/helicopter/machine_gun.png");
+    if (machineGunSprite.id == 0) machineGunSprite = LoadTexture("../../assets/sprites/helicopter/machine_gun.png");
+    if (machineGunSprite.id == 0) machineGunSprite = LoadTexture("../../../assets/sprites/helicopter/machine_gun.png");
+    if (machineGunSprite.id != 0) hasMachineGun = true;
 
     // Carrega os Sons
     engineLoopActive = false;
@@ -131,13 +148,81 @@ void Player::Update(float deltaTime)
     if (position.x > 1024 - 20) position.x = 1024 - 20;
     if (position.y < 20) position.y = 20;
     if (position.y > 768 - 20) position.y = 768 - 20;
+
+    // LOGICA DA METRALHADORA (So atira se o motor ja ligou)
+    if (scale >= 1.0f) 
+    {
+        isShooting = (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL));
+        if (isShooting && hasMachineGun)
+        {
+            mgFrameTimer += deltaTime;
+            if (mgFrameTimer >= 0.05f) // 20 Quadros por segundo (bem rapido)
+            {
+                mgFrameTimer = 0.0f;
+                mgCurrentFrame++;
+                
+                // Acha o limite de frames dividindo a largura total da imagem por 16 (tamanho do quadro)
+                int maxFrames = machineGunSprite.width / 16;
+                if (maxFrames <= 0) maxFrames = 1;
+
+                if (mgCurrentFrame >= maxFrames) mgCurrentFrame = 0;
+            }
+        }
+        else
+        {
+            mgCurrentFrame = 0; // Desliga a animacao se soltar o botão
+            isShooting = false;
+        }
+    }
 }
 
 void Player::Render() const
 {
+    float altitude = scale - 0.6f;
+    float shadowDistance = 15.0f + (altitude * 100.0f); 
+    Vector2 shadowOffset = { shadowDistance, shadowDistance }; 
+
+    // -------------------------------------------------------------
+    // ETAPA 1: DESENHA AS SOMBRAS OPACAS NO FRAMEBUFFER
+    // -------------------------------------------------------------
+    BeginTextureMode(shadowTarget);
+        ClearBackground(BLANK); // Limpa o fundo do buffer com alfa 0
+
+        if (hasSprite)
+        {
+            Vector2 shadowDrawPos = { 
+                position.x + shadowOffset.x - (sprite.width * scale) / 2.0f, 
+                position.y + shadowOffset.y - (sprite.height * scale) / 2.0f 
+            };
+            DrawTextureEx(sprite, shadowDrawPos, 0.0f, scale, BLACK);
+        }
+
+        if (hasRotor)
+        {
+            Rectangle sourceRec = { 0.0f, 0.0f, (float)rotorSprite.width, (float)rotorSprite.height };
+            Vector2 origin = { (rotorSprite.width * scale) / 2.0f, (rotorSprite.height * scale) / 2.0f };
+            Rectangle shadowDestRec = { position.x + shadowOffset.x, position.y + shadowOffset.y + (rotorOffsetY * scale), rotorSprite.width * scale, rotorSprite.height * scale };
+            
+            DrawTexturePro(rotorSprite, sourceRec, shadowDestRec, origin, rotorRotation, BLACK);
+        }
+    EndTextureMode();
+
+    // -------------------------------------------------------------
+    // ETAPA 2: DESENHA A SOMBRA UNIFICADA NA TELA (com 50% de transparencia)
+    // -------------------------------------------------------------
+    // Em OpenGL a textura renderizada fica de cabeca para baixo, por isso a altura do sourceRec é negativa!
+    Rectangle sourceRecTarget = { 0.0f, 0.0f, (float)shadowTarget.texture.width, -(float)shadowTarget.texture.height };
+    Rectangle destRecTarget = { 0.0f, 0.0f, (float)shadowTarget.texture.width, (float)shadowTarget.texture.height };
+    
+    // A mágica é que aplicamos a transparência ({255, 255, 255, 120}) na "foto" inteira, não peça por peça
+    DrawTexturePro(shadowTarget.texture, sourceRecTarget, destRecTarget, { 0.0f, 0.0f }, 0.0f, { 255, 255, 255, 40 });
+
+
+    // -------------------------------------------------------------
+    // ETAPA 3: DESENHA O HELICOPTERO REAL POR CIMA
+    // -------------------------------------------------------------
     if (hasSprite)
     {
-        // Desenha o corpo do helicoptero
         Vector2 drawPos = { 
             position.x - (sprite.width * scale) / 2.0f, 
             position.y - (sprite.height * scale) / 2.0f 
@@ -149,27 +234,34 @@ void Player::Render() const
         DrawRectangle(position.x - 15, position.y - 15, 30, 30, GRAY);
     }
 
+    // -------------------------------------------------------------
+    // ETAPA 3.5: DESENHA O FOGO DA METRALHADORA
+    // -------------------------------------------------------------
+    if (hasMachineGun && isShooting)
+    {
+        // Pega o quadro atual multiplicando o indice por 16px (largura do quadro)
+        Rectangle sourceRec = { (float)(mgCurrentFrame * 16), 0.0f, 16.0f, 24.0f };
+        Vector2 origin = { (16.0f * scale) / 2.0f, (24.0f * scale) / 2.0f };
+        
+        // Coloca no bico usando mgOffsetY
+        Rectangle destRec = { position.x, position.y + (mgOffsetY * scale), 16.0f * scale, 24.0f * scale };
+        
+        DrawTexturePro(machineGunSprite, sourceRec, destRec, origin, 0.0f, WHITE);
+    }
+
+    // -------------------------------------------------------------
+    // ETAPA 4: DESENHA A HELICE POR CIMA DE TUDO
+    // -------------------------------------------------------------
     if (hasRotor)
     {
-        // -------------------------------------------------------------
-        // AQUI VOCE AJUSTA A POSICAO DA HELICE!
-        // Esse valor se ajusta automaticamente a escala agora.
-        // -------------------------------------------------------------
-        float rotorOffsetY = -28.0f; 
-
-        // Para girar uma imagem pelo centro dela, usamos DrawTexturePro
         Rectangle sourceRec = { 0.0f, 0.0f, (float)rotorSprite.width, (float)rotorSprite.height };
-        
-        // Multiplicamos o Offset pelo 'scale' para que a helice acompanhe o corpo perfeitamente
-        Rectangle destRec = { position.x, position.y + (rotorOffsetY * scale), rotorSprite.width * scale, rotorSprite.height * scale };
         Vector2 origin = { (rotorSprite.width * scale) / 2.0f, (rotorSprite.height * scale) / 2.0f };
-
-        // Desenha a helice rodando
+        Rectangle destRec = { position.x, position.y + (rotorOffsetY * scale), rotorSprite.width * scale, rotorSprite.height * scale };
+        
         DrawTexturePro(rotorSprite, sourceRec, destRec, origin, rotorRotation, WHITE);
     }
     else
     {
-        // Rotor generico rodando
         DrawCircle(position.x, position.y - 15.0f, 10, DARKGRAY); 
     }
 }

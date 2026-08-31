@@ -18,8 +18,19 @@ private:
     Texture2D sprite; // Corpo do helicoptero
     bool hasSprite;
     
+    RenderTexture2D shadowTarget; // Buffer para unificar a sombra e evitar sobreposição
+
     Texture2D rotorSprite; // Helice
     bool hasRotor;
+    float rotorOffsetY; // Ajuste vertical da helice para o jogador alterar facilmente
+    
+    Texture2D machineGunSprite; // Animacao de Tiro
+    bool hasMachineGun;
+    bool isShooting;
+    int mgCurrentFrame;
+    float mgFrameTimer;
+    float mgOffsetY; // Distancia para o nariz do helicoptero
+    
     float rotorRotation; // Angulo atual de giro em graus
     float currentRotorSpeed; // Velocidade atual de giro
     float targetRotorSpeed; // Velocidade maxima
