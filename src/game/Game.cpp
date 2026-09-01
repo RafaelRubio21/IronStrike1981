@@ -2,10 +2,6 @@
 #include <raylib.h>
 #include <cmath>
 
-static Texture2D smokeFrames[7] = {0};
-static bool smokeLoaded = false;
-static float SMOKE_OFFSET_X = 15.0f;   // Ajuste da fumaça na horizontal
-static float SMOKE_OFFSET_Y = -20.0f; // Ajuste da fumaça na vertical (-10 puxa pra cima do chassi)
 
 void Game::Initialize()
 {
@@ -64,27 +60,8 @@ void Game::Initialize()
     }
     
     explosionManager.Initialize();
+    smokeManager.Initialize();
     
-    // Carrega a Animação de Fumaça (smoke1_1 até smoke1_7)
-    if (!smokeLoaded)
-    {
-        const char* smokePaths[] = {
-            "assets/sprites/smokes/smoke1/",
-            "../../assets/sprites/smokes/smoke1/",
-            "../../../assets/sprites/smokes/smoke1/"
-        };
-        for (int p = 0; p < 3; p++)
-        {
-            if (smokeFrames[0].id == 0)
-            {
-                for (int f = 0; f < 7; f++)
-                {
-                    smokeFrames[f] = LoadTexture(TextFormat("%ssmoke1_%d.png", smokePaths[p], f + 1));
-                }
-            }
-        }
-        smokeLoaded = true;
-    }
 }
 
 void Game::Update(float deltaTime)
@@ -147,22 +124,15 @@ void Game::Update(float deltaTime)
         {
             enemies[i]->hasFired = false;
             
-            EnemyBullet bullet;
             // O Tank usa rotação 0 = para BAIXO (Y+)
             float rad = enemies[i]->cannonRotation * DEG2RAD;
             Vector2 forward = { -sinf(rad), cosf(rad) };
             
             // Spawna na ponta do cano
             float offset = std::abs(enemies[i]->fireOffsetY);
-            bullet.position.x = enemies[i]->position.x + (forward.x * offset);
-            bullet.position.y = enemies[i]->position.y + (forward.y * offset);
-            
-            // Velocidade devagar (250 pixels por segundo)
-            bullet.velocity.x = forward.x * 250.0f;
-            bullet.velocity.y = forward.y * 250.0f;
-            
-            bullet.active = true;
-            bullet.trailTimer = 0.0f;
+            Vector2 startPos = { enemies[i]->position.x + (forward.x * offset), enemies[i]->position.y + (forward.y * offset) };
+            EnemyBullet bullet;
+            bullet.Initialize(startPos, forward, 250.0f);
             enemyBullets.push_back(bullet);
         }
         
@@ -291,36 +261,13 @@ void Game::Render()
     // ETAPA 5: DESENHAR FUMAÇAS E EXPLOSÕES POR CIMA DE TUDO
     for (const auto& e : enemies)
     {
-        if (e->isDestroyed && smokeFrames[0].id != 0)
-        {
-            Texture2D sTex = smokeFrames[e->smokeFrame];
-            float sW = (float)sTex.width;
-            float sH = (float)sTex.height;
-            Rectangle sSource = { 0.0f, 0.0f, (float)sTex.width, (float)sTex.height };
-            Rectangle sDest = { e->position.x + SMOKE_OFFSET_X, e->position.y + SMOKE_OFFSET_Y, sW, sH };
-            Vector2 sOrigin = { sW / 2.0f, sH / 2.0f };
-            DrawTexturePro(sTex, sSource, sDest, sOrigin, 0.0f, WHITE);
-        }
+        if (e->isDestroyed) smokeManager.Render(e->position, e->smokeFrame);
     }
     
     // Tiros Inimigos
     for (const auto& b : enemyBullets)
     {
-        // Rastro
-        for (int i = 0; i < (int)b.trail.size(); i++)
-        {
-            float alpha = (float)i / (float)b.trail.size();
-            float size = alpha * 4.0f;
-            DrawCircleV(b.trail[i], size, { 80, 80, 80, (unsigned char)(alpha * 200) });
-            DrawCircleV(b.trail[i], size * 0.5f, { 255, 100, 0, (unsigned char)(alpha * 150) });
-        }
-        
-        if (b.active)
-        {
-            DrawCircleV(b.position, 7.0f, { 255, 50, 0, 255 });
-            DrawCircleV(b.position, 4.0f, ORANGE);
-            DrawCircleV(b.position, 2.0f, WHITE);
-        }
+        b.Render();
     }
     
     explosionManager.Render();
@@ -332,3 +279,4 @@ void Game::Render()
 
 
 }
+

@@ -18,6 +18,8 @@ FetchContent_MakeAvailable(raylib)
 add_executable(IronStrike1981 
     src/main.cpp
     src/game/Game.cpp
+    src/game/SmokeManager.cpp
+    src/game/EnemyBullet.cpp
     src/game/Player.cpp
     src/game/Tank.cpp
     src/game/ExplosionManager.cpp
@@ -25,3 +27,5 @@ add_executable(IronStrike1981
 
 target_include_directories(IronStrike1981 PRIVATE src)
 target_link_libraries(IronStrike1981 PRIVATE raylib)
+
+

@@ -4,17 +4,12 @@
 #include "Player.h"
 #include "Tank.h"
 #include "ExplosionManager.h"
+#include "SmokeManager.h"
+#include "EnemyBullet.h"
 #include <vector>
 #include <memory>
 
-struct EnemyBullet {
-    Vector2 position;
-    Vector2 velocity;
-    bool active;
-    
-    std::vector<Vector2> trail;
-    float trailTimer;
-};
+
 
 class Game
 {
@@ -29,6 +24,7 @@ private:
     
     std::vector<std::unique_ptr<EnemyBase>> enemies;
     ExplosionManager explosionManager;
+    SmokeManager smokeManager;
     std::vector<EnemyBullet> enemyBullets;
     float tankSpawnTimer;
     

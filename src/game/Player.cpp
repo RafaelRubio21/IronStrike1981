@@ -94,8 +94,20 @@ void Player::Initialize(Vector2 startPos)
 
 void Player::Update(float deltaTime)
 {
+    // Atualiza a posicao de todos os tiros criados
+    for (int i = 0; i < bullets.size(); i++)
+    {
+        bullets[i].y -= bulletSpeed * deltaTime; // Tiro sobe a tela
+        
+        if (bullets[i].y < -50) // Se saiu da tela por cima, apaga da memoria
+        {
+            bullets.erase(bullets.begin() + i);
+            i--; 
+        }
+    }
     if (hitTimer > 0.0f) hitTimer -= deltaTime;
     if (isDestroyed) {
+        isShooting = false; // Força parar de atirar ao morrer
         if (scale > 0.5f) {
             scale -= 0.5f * deltaTime;
             if (scale <= 0.5f) {
@@ -239,17 +251,7 @@ void Player::Update(float deltaTime)
         wasShooting = isShooting;
     }
 
-    // Atualiza a posicao de todos os tiros criados
-    for (int i = 0; i < bullets.size(); i++)
-    {
-        bullets[i].y -= bulletSpeed * deltaTime; // Tiro sobe a tela
-        
-        if (bullets[i].y < -50) // Se saiu da tela por cima, apaga da memoria
-        {
-            bullets.erase(bullets.begin() + i);
-            i--; 
-        }
-    }
+
 }
 
 bool Player::CheckBulletHits(Rectangle targetRect)
@@ -391,3 +393,4 @@ void Player::TakeDamage(int damage)
         if (engineStartingSound.frameCount != 0) StopSound(engineStartingSound);
     }
 }
+
