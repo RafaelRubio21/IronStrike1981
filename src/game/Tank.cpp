@@ -231,14 +231,7 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed)
         
     if (isDestroyed)
     {
-        // Atualiza a fumaça local do tanque
-        smokeAnimTimer += deltaTime;
-        if (smokeAnimTimer >= 0.07f)
-        {
-            smokeAnimTimer = 0.0f;
-            smokeFrame++;
-            if (smokeFrame >= 7) smokeFrame = 0;
-        }
+        // A animação de fumaça agora é feita automaticamente pelo EnemyBase::BaseUpdate()
     }
     else
     {

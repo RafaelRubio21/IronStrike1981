@@ -65,7 +65,7 @@ public:
             isActive = false;
         }
         
-        // Atrito ao ser destruído: derrapa até parar
+        // Atrito ao ser destruído e Animação de Fumaça Universal
         if (isDestroyed)
         {
             if (velocity.x > 0.0f) { velocity.x -= friction * deltaTime; if (velocity.x < 0.0f) velocity.x = 0.0f; }
@@ -73,6 +73,15 @@ public:
             
             if (velocity.y > 0.0f) { velocity.y -= friction * deltaTime; if (velocity.y < 0.0f) velocity.y = 0.0f; }
             else if (velocity.y < 0.0f) { velocity.y += friction * deltaTime; if (velocity.y > 0.0f) velocity.y = 0.0f; }
+            
+            // Fumaça animada universal para inimigos abatidos
+            smokeAnimTimer += deltaTime;
+            if (smokeAnimTimer >= 0.07f)
+            {
+                smokeAnimTimer = 0.0f;
+                smokeFrame++;
+                if (smokeFrame >= 7) smokeFrame = 0;
+            }
         }
     }
 
@@ -93,6 +102,10 @@ public:
     float rotation = 0.0f;
     float scale = 1.0f;
     float speed = 0.0f;
+    
+    // Variáveis da animação de fumaça (inicia aleatório para inimigos não fumegarem em sincronia)
+    int smokeFrame = 0;
+    float smokeAnimTimer = 0.0f;
     
     // Dimensões do inimigo (usado pela hitbox universal)
     float width = 50.0f;

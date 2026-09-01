@@ -36,9 +36,6 @@ public:
     float fireOffsetY;
     float cannonRotation;
     
-    int smokeFrame;
-    float smokeAnimTimer;
-    
     std::vector<TrackMark> tracks;
     float trackSpawnTimer;
     
@@ -54,4 +51,5 @@ private:
     bool isCannonShooting;
     float turretAngularVel; // Velocidade angular atual da torreta (inércia)
 };
+
 
