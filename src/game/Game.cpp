@@ -185,6 +185,12 @@ void Game::Update(float deltaTime)
             {
                 enemies[i]->TakeDamage(1); // Arranca 1 de HP por bala
                 
+                // Exibe a faísca (FireElement1) em um ponto aleatório dentro da hitbox
+                Rectangle hit = enemies[i]->GetHitbox();
+                float randX = hit.x + (float)GetRandomValue(0, (int)hit.width);
+                float randY = hit.y + (float)GetRandomValue(0, (int)hit.height);
+                explosionManager.Spawn({randX, randY}, ExplosionType::TYPE_2, 0.5f);
+                
                 // Se esse tiro acabou de destruir o tanque
                 if (enemies[i]->hp <= 0 && enemies[i]->isDestroyed)
                 {

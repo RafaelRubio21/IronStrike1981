@@ -12,7 +12,7 @@ void ExplosionManager::Initialize()
             "../../../assets/sprites/explosions/"
         };
         
-        // Vamos carregar a Explosion0 e Explosion1 (2 tipos)
+        // Vamos carregar a Explosion0 e Explosion1
         for (int t = 0; t < 2; t++)
         {
             for (int p = 0; p < 3; p++)
@@ -26,6 +26,19 @@ void ExplosionManager::Initialize()
                 }
             }
         }
+        
+        // Carrega o FireElement1 no slot TYPE_2 (que tem 7 frames apenas)
+        for (int p = 0; p < 3; p++)
+        {
+            if (expFrames[2][0].id == 0)
+            {
+                for (int f = 0; f < 7; f++)
+                {
+                    expFrames[2][f] = LoadTexture(TextFormat("%sFireElement1/f%d.png", rootPaths[p], f + 1));
+                }
+            }
+        }
+        
         isLoaded = true;
     }
 }
