@@ -23,7 +23,7 @@ class Tank : public EnemyBase
 {
 public:
     void Initialize(Vector2 startPos, int spawnDirection, int tankType = 0); 
-    void Update(float deltaTime, Vector2 playerPos, bool playerDestroyed) override;
+    void Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, float scrollSpeed = 0.0f) override;
     void DrawShadows() const override;
     void DrawBody() const override;
     
@@ -50,6 +50,7 @@ private:
     bool isCannonShooting;
     float turretAngularVel; // Velocidade angular atual da torreta (inércia)
 };
+
 
 
 

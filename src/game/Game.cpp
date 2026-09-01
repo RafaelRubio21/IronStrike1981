@@ -27,7 +27,7 @@ void Game::Initialize()
     }
 
     levelScrollY = 0.0f;
-    scrollSpeed = 100.0f; // Pixels por segundo
+    scrollSpeed = 50.0f; // Pixels por segundo
     
     // Inicia o Canvas Global de Sombras do jogo
     globalShadowTarget = LoadRenderTexture(1024, 768);
@@ -90,6 +90,7 @@ void Game::Update(float deltaTime)
 
     // Rola o cenario
     levelScrollY += scrollSpeed * deltaTime;
+    mapManager.Update(deltaTime, scrollSpeed);
 
     player.Update(deltaTime);
     
@@ -154,7 +155,10 @@ void Game::Update(float deltaTime)
     // Atualiza os tanques, checa colisão com tiro, e remove os inativos
     for (int i = 0; i < enemies.size(); i++)
     {
-        enemies[i]->Update(deltaTime, player.GetPosition(), player.isDestroyed);
+        // Aplica o movimento da câmera sobre todos os inimigos (Ilusão de movimento)
+        enemies[i]->position.y += scrollSpeed * deltaTime;
+        
+        enemies[i]->Update(deltaTime, player.GetPosition(), player.isDestroyed, scrollSpeed);
         
         // Se o tanque atirou neste frame, instanciamos a bala inimiga!
         if (enemies[i]->hasFired)
@@ -218,7 +222,7 @@ void Game::Update(float deltaTime)
     }
     
     // Anima e remove explosões
-    explosionManager.Update(deltaTime);
+    explosionManager.Update(deltaTime, scrollSpeed);
     
     // Atualiza Balas Inimigas
     for (int i = 0; i < enemyBullets.size(); i++)
@@ -325,5 +329,8 @@ void Game::Render()
 
 
 }
+
+
+
 
 

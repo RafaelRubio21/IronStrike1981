@@ -24,7 +24,7 @@ class ExplosionManager {
 public:
     void Initialize();
     void Spawn(Vector2 position, ExplosionType type, float scale = 1.0f);
-    void Update(float deltaTime);
+    void Update(float deltaTime, float scrollSpeed = 0.0f);
     void Render() const;
     void Clear();
 
@@ -37,3 +37,4 @@ private:
     
     bool isLoaded = false;
 };
+

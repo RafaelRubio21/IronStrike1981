@@ -7,7 +7,7 @@ public:
     virtual ~EnemyBase() = default;
 
     // Métodos virtuais puros que todo inimigo OBRIGATORIAMENTE tem que implementar
-    virtual void Update(float deltaTime, Vector2 playerPos, bool playerDestroyed) = 0;
+    virtual void Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, float scrollSpeed = 0.0f) = 0;
     virtual void DrawShadows() const = 0;
     virtual void DrawBody() const = 0;
     virtual void DrawGroundEffects() const {} // Rastros, esteiras d'água, etc.
@@ -127,6 +127,7 @@ public:
     float width = 50.0f;
     float height = 50.0f;
 };
+
 
 
 

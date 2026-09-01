@@ -56,11 +56,12 @@ void ExplosionManager::Spawn(Vector2 position, ExplosionType type, float scale)
     explosions.push_back(ex);
 }
 
-void ExplosionManager::Update(float deltaTime)
+void ExplosionManager::Update(float deltaTime, float scrollSpeed)
 {
     for (int i = 0; i < explosions.size(); i++)
     {
         explosions[i].frameTimer += deltaTime;
+        explosions[i].position.y += scrollSpeed * deltaTime;
         if (explosions[i].frameTimer >= 0.05f) // 20 FPS
         {
             explosions[i].frameTimer = 0.0f;
@@ -98,5 +99,6 @@ void ExplosionManager::Clear()
 {
     explosions.clear();
 }
+
 
 

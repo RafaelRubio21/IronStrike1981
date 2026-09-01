@@ -205,7 +205,7 @@ Rectangle Tank::GetHitbox() const
     };
 }
 
-void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed)
+void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, float scrollSpeed)
 {
     if (!isActive) return;
     
@@ -237,11 +237,13 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed)
     // Atualiza vida das partículas
     for (int i = 0; i < tracks.size(); i++) {
         tracks[i].lifeTime -= deltaTime;
+        tracks[i].position.y += scrollSpeed * deltaTime;
         if (tracks[i].lifeTime <= 0) { tracks.erase(tracks.begin() + i); i--; }
     }
     
     for (int i = 0; i < dustParticles.size(); i++) {
         dustParticles[i].lifeTime -= deltaTime;
+        dustParticles[i].position.y += scrollSpeed * deltaTime;
         dustParticles[i].position.x += dustParticles[i].velocity.x * deltaTime;
         dustParticles[i].position.y += dustParticles[i].velocity.y * deltaTime;
         dustParticles[i].radius += 10.0f * deltaTime; // Poeira espalha
@@ -465,6 +467,7 @@ void Tank::DrawBody() const
         }
     }
 }
+
 
 
 
