@@ -4,7 +4,6 @@
 // =================================================================
 // CONFIGURAÇÕES GERAIS DOS TANQUES (Apenas áudios e partículas)
 // =================================================================
-static float TANK_FRICTION = 150.0f;      // Força de frenagem ao ser destruido (derrapada)
 static float TANK_VOL_EXPLOSION = 0.5f;   // Volume da explosão (0.0 a 1.0)
 static float TANK_VOL_ENGINE = 0.15f;     // Volume do motor (0.0 a 1.0)
 static float TANK_VOL_SHOOTING = 0.4f;    // Volume do tiro inimigo (0.0 a 1.0)
@@ -65,6 +64,7 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType)
     cannonFrame = 0;
     cannonAnimTimer = 0.0f;
     isCannonShooting = false;
+    turretAngularVel = 0.0f;
     shootCooldown = (float)GetRandomValue(20, 50) / 10.0f; 
     
     hitTimer = 0.0f;
@@ -161,18 +161,7 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType)
     }
 }
 
-void Tank::TakeDamage(int damage)
-{
-    if (isDestroyed) return;
-    
-    hp -= damage;
-    hitTimer = 0.05f; // Pisca de vermelho por 0.05 segundos ao ser alvejado
-    
-    if (hp <= 0)
-    {
-        Destroy();
-    }
-}
+
 
 void Tank::Destroy()
 {
@@ -224,8 +213,6 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed)
 {
     if (!isActive) return;
     
-    if (hitTimer > 0.0f) hitTimer -= deltaTime;
-    
     // Lógica da Parada Estratégica
     // O tanque avisa que vai atirar, freia suavemente (inércia), e acelera suavemente depois.
     bool isAiming = (!isCannonShooting && shootCooldown <= 0.5f && !playerDestroyed);
@@ -239,12 +226,17 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed)
         if (currentSpeedMult > 1.0f) currentSpeedMult = 1.0f;
     }
     
-    float curVelX = velocity.x * currentSpeedMult;
-    float curVelY = velocity.y * currentSpeedMult;
-
-    // Movimento
-    position.x += curVelX * deltaTime;
-    position.y += curVelY * deltaTime;
+    // Salva velocidade original e aplica o multiplicador de inércia antes do BaseUpdate
+    Vector2 originalVel = velocity;
+    velocity.x *= currentSpeedMult;
+    velocity.y *= currentSpeedMult;
+    
+    // Chama o "Trabalho Sujo" universal (hitTimer, movimento, culling, atrito)
+    EnemyBase::BaseUpdate(deltaTime);
+    
+    // Restaura a velocidade original APENAS se estiver vivo
+    // (Se estiver destruído, o atrito do BaseUpdate precisa permanecer!)
+    if (!isDestroyed) velocity = originalVel;
     
     // Atualiza vida das partículas
     for (int i = 0; i < tracks.size(); i++) {
@@ -261,6 +253,8 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed)
     }
     
     // Spawna partículas se o tanque estiver se movendo rápido o suficiente
+    float curVelX = velocity.x * currentSpeedMult;
+    float curVelY = velocity.y * currentSpeedMult;
     float speedSqr = (curVelX * curVelX) + (curVelY * curVelY);
     //if (speedSqr > 10.0f)
     //{
@@ -300,15 +294,6 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed)
     
     if (isDestroyed)
     {
-        // Atrito pesado: o tanque derrapa no chão (ferro com terra) até parar 
-        // Freia o eixo X
-        if (velocity.x > 0.0f) { velocity.x -= TANK_FRICTION * deltaTime; if (velocity.x < 0.0f) velocity.x = 0.0f; }
-        else if (velocity.x < 0.0f) { velocity.x += TANK_FRICTION * deltaTime; if (velocity.x > 0.0f) velocity.x = 0.0f; }
-
-        // Freia o eixo Y
-        if (velocity.y > 0.0f) { velocity.y -= TANK_FRICTION * deltaTime; if (velocity.y < 0.0f) velocity.y = 0.0f; }
-        else if (velocity.y < 0.0f) { velocity.y += TANK_FRICTION * deltaTime; if (velocity.y > 0.0f) velocity.y = 0.0f; }
-        
         // Atualiza a fumaça local do tanque
         smokeAnimTimer += deltaTime;
         if (smokeAnimTimer >= 0.07f)
@@ -337,11 +322,27 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed)
             if (diff > 180.0f) diff -= 360.0f;
             if (diff < -180.0f) diff += 360.0f;
             
-            // Interpola a rotação do canhão para o alvo suavemente
-            float turnSpeed = turretSpeed * deltaTime;
-            if (fabs(diff) < turnSpeed) cannonRotation = targetAngle;
-            else if (diff > 0.0f) cannonRotation += turnSpeed;
-            else cannonRotation -= turnSpeed;
+            // Inércia da Torreta: calcula a velocidade angular desejada
+            float targetAngVel = 0.0f;
+            if (fabs(diff) > 1.0f) // Zona morta de 1 grau
+            {
+                targetAngVel = (diff > 0.0f) ? turretSpeed : -turretSpeed;
+                // Reduz a velocidade quando está perto do alvo (frenagem proporcional)
+                if (fabs(diff) < 30.0f) targetAngVel *= (fabs(diff) / 30.0f);
+            }
+            
+            // Acelera/desacelera suavemente a velocidade angular
+            float turretAccel = turretSpeed * 4.0f; // Quão rápido a torreta ganha/perde velocidade
+            if (turretAngularVel < targetAngVel) {
+                turretAngularVel += turretAccel * deltaTime;
+                if (turretAngularVel > targetAngVel) turretAngularVel = targetAngVel;
+            } else {
+                turretAngularVel -= turretAccel * deltaTime;
+                if (turretAngularVel < targetAngVel) turretAngularVel = targetAngVel;
+            }
+            
+            // Aplica a velocidade angular na rotação
+            cannonRotation += turretAngularVel * deltaTime;
             
             // ----------------------------------------------------
             // IA do Canhão: Disparar
@@ -359,7 +360,6 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed)
                     shootCooldown = (float)GetRandomValue(30, 60) / 10.0f; // Proximo tiro em 3s a 6s
                     
                     if (tankShootingSnd.frameCount != 0) PlaySound(tankShootingSnd);
-                    // Futuro: Instanciar uma bala inimiga aqui
                 }
             }
         }
@@ -406,19 +406,13 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed)
             }
         }
     }
-    
-    // Desativa se sair muito da tela
-    if (position.x < -100 || position.x > 1200 || position.y > 900)
-    {
-        isActive = false;
-    }
 }
 
 void Tank::DrawShadows() const
 {
     if (!isActive || !tankTexturesLoaded) return;
     
-    Color shadowColor = { 0, 0, 0, 100 }; // Sombra preta transparente
+    Color shadowColor = BLACK; // Sombra opaca — a transparência é controlada pelo carimbo global
     
     // Sombra do corpo
     Texture2D tTex = isDestroyed ? tankDestroyedFrame[type] : tankFrames[type][currentFrame];

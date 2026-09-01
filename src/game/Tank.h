@@ -17,32 +17,22 @@ struct DustParticle {
     float radius;
 };
 
-class Tank
+#include "EnemyBase.h"
+
+class Tank : public EnemyBase
 {
 public:
     void Initialize(Vector2 startPos, int spawnDirection, int tankType = 0); 
-    void Update(float deltaTime, Vector2 playerPos, bool playerDestroyed);
+    void Update(float deltaTime, Vector2 playerPos, bool playerDestroyed) override;
     void DrawTracksAndDust() const;
-    void DrawShadows() const;
-    void DrawBody() const;
+    void DrawShadows() const override;
+    void DrawBody() const override;
     
-    Rectangle GetHitbox() const;
+    Rectangle GetHitbox() const override;
     
-    void TakeDamage(int damage);
-    void Destroy();
+    void Destroy() override;
 
-    bool isDestroyed;
-    bool isActive;
-    bool hasFired;
-    
-    int type; // Guarda o modelo do tanque
-    int hp;
-    float hitTimer; // Para piscar a tela quando toma tiro
-    
-    Vector2 position;
-    
     // Status individuais do tanque (podem variar por tipo)
-    float speed;
     float currentSpeedMult;
     float turretSpeed;
     float cannonOffsetY;
@@ -59,17 +49,11 @@ public:
     float dustSpawnTimer;
 
 private:
-    Vector2 velocity;
-    float rotation;
-    
-    float scale; // Permite aumentar ou diminuir o tanque
     int currentFrame;
     float frameTimer;
     
     int cannonFrame;
     float cannonAnimTimer;
     bool isCannonShooting;
-    float shootCooldown;
+    float turretAngularVel; // Velocidade angular atual da torreta (inércia)
 };
-
-

@@ -258,7 +258,11 @@ void Game::Update(float deltaTime)
 
 void Game::Render()
 {
-    // ETAPA 1: SHADOW PASS GLOBAL
+    // ETAPA 1: DESENHO PRINCIPAL NA TELA
+    BeginDrawing();
+    ClearBackground({ 34, 139, 34, 255 }); // Verde Floresta Escuro temporario
+
+    // ETAPA 2: SHADOW PASS GLOBAL
     BeginTextureMode(globalShadowTarget);
         ClearBackground(BLANK); // Limpa o fundo do buffer com alfa 0
         
@@ -268,10 +272,6 @@ void Game::Render()
         // Desenha a sombra do player
         player.DrawShadows();
     EndTextureMode();
-
-    // ETAPA 2: DESENHO PRINCIPAL NA TELA
-    BeginDrawing();
-    ClearBackground({ 34, 139, 34, 255 }); // Verde Floresta Escuro temporario
     
     BeginMode2D(camera);
         // Quando criarmos as tilesets (chao e agua), desenhamos elas aqui embaixo!
@@ -281,8 +281,8 @@ void Game::Render()
     // ETAPA 3: CARIMBA O CANVAS DE SOMBRAS UNIFICADO
     Rectangle sourceRec = { 0.0f, 0.0f, (float)globalShadowTarget.texture.width, -(float)globalShadowTarget.texture.height };
     Rectangle destRec = { 0.0f, 0.0f, (float)globalShadowTarget.texture.width, (float)globalShadowTarget.texture.height };
-    // Aplica o nivel de transparencia 40 em todas as sombras unificadas!
-    DrawTexturePro(globalShadowTarget.texture, sourceRec, destRec, { 0.0f, 0.0f }, 0.0f, { 255, 255, 255, 40 });
+    // Aplica o nivel de transparencia nas sombras unificadas! (0-255, ajuste aqui)
+    DrawTexturePro(globalShadowTarget.texture, sourceRec, destRec, { 0.0f, 0.0f }, 0.0f, { 255, 255, 255, 80 });
 
     // ETAPA 4: DESENHA AS CORES REAIS DOS OBJETOS POR CIMA DA SOMBRA
     for (const auto& t : tanks) t.DrawBody();
