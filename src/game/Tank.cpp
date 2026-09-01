@@ -19,6 +19,11 @@ static float TANK_VOL_EXPLOSION = 0.5f;   // Volume da explosão (0.0 a 1.0)
 static float TANK_VOL_ENGINE = 0.15f;     // Volume do motor (0.0 a 1.0)
 static float TANK_VOL_SHOOTING = 0.4f;    // Volume do tiro inimigo (0.0 a 1.0)
 
+// Tolerância de alinhamento do chassi, em graus. O tanque só arranca quando
+// está apontando pro waypoint dentro dessa margem. Aumentar deixa as curvas
+// mais arredondadas; diminuir faz ele seguir o traçado mais à risca.
+static float TANK_ALIGN_TOLERANCE = 6.0f;
+
 // =================================================================
 
 // Suporte para 2 modelos de tanque (0 = Normal, 1 = Pesado)
@@ -115,8 +120,23 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::v
         currentWaypoint = 0;
     }
     
+    // Se o tanque nasce com uma rota, ele já começa apontado pro primeiro
+    // destino. Sem isso ele nasceria virado pra spawnDirection e gastaria os
+    // primeiros segundos girando no lugar, saindo torto do traçado.
+    if (currentWaypoint >= 0 && currentWaypoint < (int)waypoints.size())
+    {
+        float dx = waypoints[currentWaypoint].x - position.x;
+        float dy = waypoints[currentWaypoint].y - position.y;
+
+        if ((dx * dx + dy * dy) > 0.01f)
+        {
+            rotation = atan2f(dy, dx) * (180.0f / PI) - 90.0f;
+            velocity = { 0.0f, 0.0f }; // a navegação define a velocidade no 1o frame
+        }
+    }
+
     cannonRotation = rotation;
-    
+
     smokeFrame = GetRandomValue(0, 6);
     smokeAnimTimer = 0.0f;
     
@@ -318,21 +338,25 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, floa
 
             rotation += diff;
 
-            // O tanque anda pra FRENTE, na direção em que o chassi está
-            // apontado — nunca de lado, como acontecia quando a velocidade
-            // apontava direto pro waypoint.
-            float rad = rotation * DEG2RAD;
-            Vector2 forward = { -sinf(rad), cosf(rad) };
+            // Enquanto não estiver apontado pro destino, o tanque fica parado
+            // girando no próprio eixo. Só depois de alinhado ele arranca, e aí
+            // anda em linha reta até o waypoint — é isso que mantém o traçado
+            // da rota. Se andasse enquanto gira, faria um arco e sairia da reta.
+            float remaining = fabsf(NormalizeAngleDiff(targetRot - rotation));
 
-            // Quanto mais desalinhado com o waypoint, mais devagar ele anda.
-            // Numa curva fechada isso faz o tanque quase parar e girar no
-            // lugar, em vez de descrever um arco largo.
-            float remaining = NormalizeAngleDiff(targetRot - rotation);
-            float alignment = cosf(remaining * DEG2RAD);
-            if (alignment < 0.0f) alignment = 0.0f;
+            if (remaining <= TANK_ALIGN_TOLERANCE)
+            {
+                // Anda pra FRENTE, na direção em que o chassi aponta, nunca de lado
+                float rad = rotation * DEG2RAD;
+                Vector2 forward = { -sinf(rad), cosf(rad) };
 
-            velocity.x = forward.x * speed * alignment;
-            velocity.y = forward.y * speed * alignment;
+                velocity.x = forward.x * speed;
+                velocity.y = forward.y * speed;
+            }
+            else
+            {
+                velocity = { 0.0f, 0.0f };
+            }
         }
     }
 
