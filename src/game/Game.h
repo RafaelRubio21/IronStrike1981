@@ -5,6 +5,7 @@
 #include "Tank.h"
 #include "ExplosionManager.h"
 #include <vector>
+#include <memory>
 
 struct EnemyBullet {
     Vector2 position;
@@ -26,7 +27,7 @@ public:
 private:
     Player player;
     
-    std::vector<Tank> tanks;
+    std::vector<std::unique_ptr<EnemyBase>> enemies;
     ExplosionManager explosionManager;
     std::vector<EnemyBullet> enemyBullets;
     float tankSpawnTimer;
@@ -43,4 +44,5 @@ private:
     
     RenderTexture2D globalShadowTarget; // O grande canvas global de sombras unificadas!
 };
+
 

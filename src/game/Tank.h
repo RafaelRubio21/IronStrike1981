@@ -33,8 +33,6 @@ public:
     float currentSpeedMult;
     float turretSpeed;
     float cannonOffsetY;
-    float fireOffsetY;
-    float cannonRotation;
     
     std::vector<TrackMark> tracks;
     float trackSpawnTimer;
@@ -51,5 +49,7 @@ private:
     bool isCannonShooting;
     float turretAngularVel; // Velocidade angular atual da torreta (inércia)
 };
+
+
 
 

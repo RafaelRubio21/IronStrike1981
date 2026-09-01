@@ -18,7 +18,7 @@ void Game::Initialize()
 
     player.Initialize({ 1024.0f / 2.0f, 600.0f });
 
-    tanks.clear();
+    enemies.clear();
     explosionManager.Clear();
     enemyBullets.clear();
     tankSpawnTimer = 0.0f;
@@ -126,36 +126,36 @@ void Game::Update(float deltaTime)
         tankSpawnTimer = 0.0f;
         int type = GetRandomValue(0, 2);
         
-        Tank t;
+        auto t = std::make_unique<Tank>();
         if (type == 0) // Vem de cima
-            t.Initialize({ (float)GetRandomValue(100, 924), -100.0f }, 0);
+            t->Initialize({ (float)GetRandomValue(100, 924), -100.0f }, 0);
         else if (type == 1) // Vem da esquerda
-            t.Initialize({ -100.0f, (float)GetRandomValue(100, 600) }, 1);
+            t->Initialize({ -100.0f, (float)GetRandomValue(100, 600) }, 1);
         else // Vem da direita
-            t.Initialize({ 1124.0f, (float)GetRandomValue(100, 600) }, 2);
+            t->Initialize({ 1124.0f, (float)GetRandomValue(100, 600) }, 2);
             
-        tanks.push_back(t);
+        enemies.push_back(std::move(t));
     }
     
     // Atualiza os tanques, checa colisão com tiro, e remove os inativos
-    for (int i = 0; i < tanks.size(); i++)
+    for (int i = 0; i < enemies.size(); i++)
     {
-        tanks[i].Update(deltaTime, player.GetPosition(), player.isDestroyed);
+        enemies[i]->Update(deltaTime, player.GetPosition(), player.isDestroyed);
         
         // Se o tanque atirou neste frame, instanciamos a bala inimiga!
-        if (tanks[i].hasFired)
+        if (enemies[i]->hasFired)
         {
-            tanks[i].hasFired = false;
+            enemies[i]->hasFired = false;
             
             EnemyBullet bullet;
             // O Tank usa rotação 0 = para BAIXO (Y+)
-            float rad = tanks[i].cannonRotation * DEG2RAD;
+            float rad = enemies[i]->cannonRotation * DEG2RAD;
             Vector2 forward = { -sinf(rad), cosf(rad) };
             
             // Spawna na ponta do cano
-            float offset = std::abs(tanks[i].fireOffsetY);
-            bullet.position.x = tanks[i].position.x + (forward.x * offset);
-            bullet.position.y = tanks[i].position.y + (forward.y * offset);
+            float offset = std::abs(enemies[i]->fireOffsetY);
+            bullet.position.x = enemies[i]->position.x + (forward.x * offset);
+            bullet.position.y = enemies[i]->position.y + (forward.y * offset);
             
             // Velocidade devagar (250 pixels por segundo)
             bullet.velocity.x = forward.x * 250.0f;
@@ -166,22 +166,22 @@ void Game::Update(float deltaTime)
             enemyBullets.push_back(bullet);
         }
         
-        if (tanks[i].isDestroyed)
+        if (enemies[i]->isDestroyed)
         {
-            tanks[i].hitTimer -= deltaTime;
+            enemies[i]->hitTimer -= deltaTime;
         }
         
         // Só tenta matar o tanque se ele já não estiver destruído
-        if (!tanks[i].isDestroyed)
+        if (!enemies[i]->isDestroyed)
         {
-            if (player.CheckBulletHits(tanks[i].GetHitbox()))
+            if (player.CheckBulletHits(enemies[i]->GetHitbox()))
             {
-                tanks[i].TakeDamage(1); // Arranca 1 de HP por bala
+                enemies[i]->TakeDamage(1); // Arranca 1 de HP por bala
                 
                 // Se esse tiro acabou de destruir o tanque
-                if (tanks[i].hp <= 0 && tanks[i].isDestroyed)
+                if (enemies[i]->hp <= 0 && enemies[i]->isDestroyed)
                 {
-                    explosionManager.Spawn(tanks[i].position, ExplosionType::TYPE_0, 1.0f);
+                    explosionManager.Spawn(enemies[i]->position, ExplosionType::TYPE_0, 1.0f);
                 }
                 else
                 {
@@ -197,9 +197,9 @@ void Game::Update(float deltaTime)
         }
         
         // Remove da lista se ele saiu da tela
-        if (!tanks[i].isActive)
+        if (!enemies[i]->isActive)
         {
-            tanks.erase(tanks.begin() + i);
+            enemies.erase(enemies.begin() + i);
             i--;
         }
     }
@@ -266,8 +266,8 @@ void Game::Render()
     BeginTextureMode(globalShadowTarget);
         ClearBackground(BLANK); // Limpa o fundo do buffer com alfa 0
         
-        // Desenha a sombra de todos os tanques primeiro
-        for (const auto& t : tanks) t.DrawShadows();
+        // Desenha a sombra de todos os inimigos primeiro
+        for (const auto& e : enemies) e->DrawShadows();
         
         // Desenha a sombra do player
         player.DrawShadows();
@@ -275,30 +275,29 @@ void Game::Render()
     
     BeginMode2D(camera);
         // Quando criarmos as tilesets (chao e agua), desenhamos elas aqui embaixo!
-        
+        for (const auto& e : enemies) e->DrawGroundEffects();
     EndMode2D();
 
     // ETAPA 3: CARIMBA O CANVAS DE SOMBRAS UNIFICADO
     Rectangle sourceRec = { 0.0f, 0.0f, (float)globalShadowTarget.texture.width, -(float)globalShadowTarget.texture.height };
     Rectangle destRec = { 0.0f, 0.0f, (float)globalShadowTarget.texture.width, (float)globalShadowTarget.texture.height };
-    // Aplica o nivel de transparencia nas sombras unificadas! (0-255, ajuste aqui)
+    // Aplica o nivel de transparencia nas sombras unificadas!
     DrawTexturePro(globalShadowTarget.texture, sourceRec, destRec, { 0.0f, 0.0f }, 0.0f, { 255, 255, 255, 80 });
 
     // ETAPA 4: DESENHA AS CORES REAIS DOS OBJETOS POR CIMA DA SOMBRA
-    for (const auto& t : tanks) t.DrawBody();
+    for (const auto& e : enemies) e->DrawBody();
     player.DrawBody();
     
     // ETAPA 5: DESENHAR FUMAÇAS E EXPLOSÕES POR CIMA DE TUDO
-    for (const auto& t : tanks)
+    for (const auto& e : enemies)
     {
-        if (t.isDestroyed && smokeFrames[0].id != 0)
+        if (e->isDestroyed && smokeFrames[0].id != 0)
         {
-            Texture2D sTex = smokeFrames[t.smokeFrame];
+            Texture2D sTex = smokeFrames[e->smokeFrame];
             float sW = (float)sTex.width;
             float sH = (float)sTex.height;
             Rectangle sSource = { 0.0f, 0.0f, (float)sTex.width, (float)sTex.height };
-            // Fumaça deslocada e sempre sem rotação (0.0f)
-            Rectangle sDest = { t.position.x + SMOKE_OFFSET_X, t.position.y + SMOKE_OFFSET_Y, sW, sH };
+            Rectangle sDest = { e->position.x + SMOKE_OFFSET_X, e->position.y + SMOKE_OFFSET_Y, sW, sH };
             Vector2 sOrigin = { sW / 2.0f, sH / 2.0f };
             DrawTexturePro(sTex, sSource, sDest, sOrigin, 0.0f, WHITE);
         }
@@ -307,31 +306,29 @@ void Game::Render()
     // Tiros Inimigos
     for (const auto& b : enemyBullets)
     {
-        // Rastro (Fumaça dissipando)
+        // Rastro
         for (int i = 0; i < (int)b.trail.size(); i++)
         {
-            float alpha = (float)i / (float)b.trail.size(); // Os mais recentes são mais fortes
+            float alpha = (float)i / (float)b.trail.size();
             float size = alpha * 4.0f;
             DrawCircleV(b.trail[i], size, { 80, 80, 80, (unsigned char)(alpha * 200) });
-            DrawCircleV(b.trail[i], size * 0.5f, { 255, 100, 0, (unsigned char)(alpha * 150) }); // Centro laranjinha do rastro
+            DrawCircleV(b.trail[i], size * 0.5f, { 255, 100, 0, (unsigned char)(alpha * 150) });
         }
         
         if (b.active)
         {
-            // Centro da Bala (Plasma/Fogo incandescente)
-            DrawCircleV(b.position, 7.0f, { 255, 50, 0, 255 }); // Borda laranja escuro
-            DrawCircleV(b.position, 4.0f, ORANGE);              // Laranja
-            DrawCircleV(b.position, 2.0f, WHITE);               // Centro quente
+            DrawCircleV(b.position, 7.0f, { 255, 50, 0, 255 });
+            DrawCircleV(b.position, 4.0f, ORANGE);
+            DrawCircleV(b.position, 2.0f, WHITE);
         }
     }
     
     explosionManager.Render();
 
-    // UI DA TELA (Textos, HUD, FPS sempre desenhados por ultimo e FORA da câmera)
+    // UI
     DrawFPS(10, 10);
 
     EndDrawing();
 
 
 }
-

@@ -10,6 +10,8 @@ public:
     virtual void Update(float deltaTime, Vector2 playerPos, bool playerDestroyed) = 0;
     virtual void DrawShadows() const = 0;
     virtual void DrawBody() const = 0;
+    virtual void DrawGroundEffects() const {} // Rastros, esteiras d'água, etc.
+    
     virtual Rectangle GetHitbox() const 
     {
         float scaledWidth = width * scale;
@@ -102,6 +104,8 @@ public:
     float rotation = 0.0f;
     float scale = 1.0f;
     float speed = 0.0f;
+    float cannonRotation = 0.0f;
+    float fireOffsetY = 0.0f;
     
     // Variáveis da animação de fumaça (inicia aleatório para inimigos não fumegarem em sincronia)
     int smokeFrame = 0;
@@ -111,6 +115,7 @@ public:
     float width = 50.0f;
     float height = 50.0f;
 };
+
 
 
 
