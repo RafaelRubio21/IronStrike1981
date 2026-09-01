@@ -1,6 +1,17 @@
 #include "Tank.h"
 #include <cmath>
 
+// Reduz uma diferença de ângulo para a faixa -180..180, ou seja, o menor
+// caminho de giro. Sem isso um alvo a -170 graus faria o tanque girar 190
+// para o lado errado.
+static float NormalizeAngleDiff(float degrees)
+{
+    degrees = fmodf(degrees, 360.0f);
+    if (degrees > 180.0f) degrees -= 360.0f;
+    if (degrees < -180.0f) degrees += 360.0f;
+    return degrees;
+}
+
 // =================================================================
 // CONFIGURAÇÕES GERAIS DOS TANQUES (Apenas áudios e partículas)
 // =================================================================
@@ -40,6 +51,7 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::v
     {
         speed = 60.0f;
         turretSpeed = 20.0f;
+        hullTurnSpeed = 90.0f; // Meia-volta em 2s
         hp = 50;
         cannonOffsetY = -25.0f;
         fireOffsetY = -110.0f; // Ajuste livremente esse valor! (Negativo = mais pra ponta do cano)
@@ -49,6 +61,7 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::v
     {
         speed = 30.0f;
         turretSpeed = 10.0f;
+        hullTurnSpeed = 45.0f; // O Pesado manobra na metade da velocidade
         hp = 12;
         cannonOffsetY = -25.0f;
         fireOffsetY = -50.0f;
@@ -290,14 +303,36 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, floa
                 if (currentWaypoint > lastIndex) currentWaypoint = lastIndex;
             }
         } else {
-            // Usa a velocidade do modelo (o Pesado é mais lento que o Normal)
-            velocity.x = (dx / dist) * speed;
-            velocity.y = (dy / dist) * speed;
-            
-            // Gira o chassi do tanque pra apontar pro waypoint
-            // atan2 retorna em radianos. Como o sprite nativo aponta pra BAIXO (0 graus), subtraímos 90 graus (-90)
-            float targetRot = atan2(dy, dx) * 180.0f / PI - 90.0f;
-            rotation = targetRot; 
+            // Para onde o chassi precisa apontar. atan2 retorna radianos e o
+            // sprite nativo aponta pra BAIXO (0 graus), por isso o -90.
+            float targetRot = atan2f(dy, dx) * (180.0f / PI) - 90.0f;
+
+            // Gira no próprio eixo, no máximo hullTurnSpeed graus por segundo.
+            // O clamp no passo é o que evita a virada brusca: se o alvo está
+            // longe, o tanque leva vários frames girando até chegar nele.
+            float diff = NormalizeAngleDiff(targetRot - rotation);
+            float maxStep = hullTurnSpeed * deltaTime;
+
+            if (diff > maxStep) diff = maxStep;
+            else if (diff < -maxStep) diff = -maxStep;
+
+            rotation += diff;
+
+            // O tanque anda pra FRENTE, na direção em que o chassi está
+            // apontado — nunca de lado, como acontecia quando a velocidade
+            // apontava direto pro waypoint.
+            float rad = rotation * DEG2RAD;
+            Vector2 forward = { -sinf(rad), cosf(rad) };
+
+            // Quanto mais desalinhado com o waypoint, mais devagar ele anda.
+            // Numa curva fechada isso faz o tanque quase parar e girar no
+            // lugar, em vez de descrever um arco largo.
+            float remaining = NormalizeAngleDiff(targetRot - rotation);
+            float alignment = cosf(remaining * DEG2RAD);
+            if (alignment < 0.0f) alignment = 0.0f;
+
+            velocity.x = forward.x * speed * alignment;
+            velocity.y = forward.y * speed * alignment;
         }
     }
 
@@ -329,9 +364,7 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, floa
             targetAngle -= 90.0f; 
             
             // Lógica de Giro Suave da Torreta para o targetAngle
-            float diff = fmodf(targetAngle - cannonRotation, 360.0f);
-            if (diff > 180.0f) diff -= 360.0f;
-            if (diff < -180.0f) diff += 360.0f;
+            float diff = NormalizeAngleDiff(targetAngle - cannonRotation);
             
             // Inércia da Torreta: calcula a velocidade angular desejada
             float targetAngVel = 0.0f;

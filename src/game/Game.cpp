@@ -23,7 +23,7 @@ void Game::Initialize()
 
     mapManager.Load("assets/maps/level1.json");
 
-    scrollSpeed = 50.0f; // Pixels por segundo
+    scrollSpeed = 10.0f; // Pixels por segundo
     
     // Inicia o Canvas Global de Sombras do jogo
     globalShadowTarget = LoadRenderTexture(Config::SCREEN_WIDTH, Config::SCREEN_HEIGHT);

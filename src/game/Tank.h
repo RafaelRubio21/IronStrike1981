@@ -23,6 +23,7 @@ public:
     // Status individuais do tanque (podem variar por tipo)
     float currentSpeedMult;
     float turretSpeed;
+    float hullTurnSpeed;  // Graus por segundo que o chassi consegue girar
     float cannonOffsetY;
     
 private:
