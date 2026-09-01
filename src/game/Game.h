@@ -3,13 +3,16 @@
 #include "raylib.h"
 #include "Player.h"
 #include "Tank.h"
+#include "ExplosionManager.h"
 #include <vector>
 
-struct Explosion {
+struct EnemyBullet {
     Vector2 position;
-    int currentFrame;
-    float frameTimer;
-    float scale;
+    Vector2 velocity;
+    bool active;
+    
+    std::vector<Vector2> trail;
+    float trailTimer;
 };
 
 class Game
@@ -24,7 +27,8 @@ private:
     Player player;
     
     std::vector<Tank> tanks;
-    std::vector<Explosion> explosions;
+    ExplosionManager explosionManager;
+    std::vector<EnemyBullet> enemyBullets;
     float tankSpawnTimer;
     
     Camera2D camera;
@@ -39,3 +43,4 @@ private:
     
     RenderTexture2D globalShadowTarget; // O grande canvas global de sombras unificadas!
 };
+

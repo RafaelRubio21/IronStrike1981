@@ -10,7 +10,12 @@ void Player::Initialize(Vector2 startPos)
     hasSprite = false;
     hasRotor = false;
     rotorOffsetY = -28.0f; // Valor ideal definido pelo jogador
-    
+
+    hp = 100;
+    hitTimer = 0.0f;
+    isDestroyed = false;
+    justHitGround = false;
+
     rotorRotation = 0.0f;
     currentRotorSpeed = 0.0f; // Comeca totalmente parada
     targetRotorSpeed = 1500.0f; // Velocidade final alvo
@@ -21,12 +26,18 @@ void Player::Initialize(Vector2 startPos)
     sprite = LoadTexture("assets/sprites/helicopter/helicopter.png");
     if (sprite.id == 0) sprite = LoadTexture("../../assets/sprites/helicopter/helicopter.png");
     if (sprite.id == 0) sprite = LoadTexture("../../../assets/sprites/helicopter/helicopter.png");
+    destroyedSprite = LoadTexture("assets/sprites/helicopter/helicopter_brocken.png");
+    if (destroyedSprite.id == 0) destroyedSprite = LoadTexture("../../assets/sprites/helicopter/helicopter_brocken.png");
+    if (destroyedSprite.id == 0) destroyedSprite = LoadTexture("../../../assets/sprites/helicopter/helicopter_brocken.png");
     if (sprite.id != 0) hasSprite = true;
 
     // Carrega a Helice
     rotorSprite = LoadTexture("assets/sprites/helicopter/helice.png");
     if (rotorSprite.id == 0) rotorSprite = LoadTexture("../../assets/sprites/helicopter/helice.png");
     if (rotorSprite.id == 0) rotorSprite = LoadTexture("../../../assets/sprites/helicopter/helice.png");
+    destroyedRotorSprite = LoadTexture("assets/sprites/helicopter/helice_brocken.png");
+    if (destroyedRotorSprite.id == 0) destroyedRotorSprite = LoadTexture("../../assets/sprites/helicopter/helice_brocken.png");
+    if (destroyedRotorSprite.id == 0) destroyedRotorSprite = LoadTexture("../../../assets/sprites/helicopter/helice_brocken.png");
     if (rotorSprite.id != 0) hasRotor = true;
 
     // Carrega o Fogo da Metralhadora
@@ -83,6 +94,28 @@ void Player::Initialize(Vector2 startPos)
 
 void Player::Update(float deltaTime)
 {
+    if (hitTimer > 0.0f) hitTimer -= deltaTime;
+    if (isDestroyed) {
+        if (scale > 0.5f) {
+            scale -= 0.5f * deltaTime;
+            if (scale <= 0.5f) {
+                scale = 0.5f;
+                justHitGround = true;
+            }
+        }
+        targetRotorSpeed = 0.0f;
+        if (velocity.x > 0.0f) { velocity.x -= friction * 200.0f * deltaTime; if (velocity.x < 0.0f) velocity.x = 0.0f; }
+        else if (velocity.x < 0.0f) { velocity.x += friction * 200.0f * deltaTime; if (velocity.x > 0.0f) velocity.x = 0.0f; }
+        if (velocity.y > 0.0f) { velocity.y -= friction * 200.0f * deltaTime; if (velocity.y < 0.0f) velocity.y = 0.0f; }
+        else if (velocity.y < 0.0f) { velocity.y += friction * 200.0f * deltaTime; if (velocity.y > 0.0f) velocity.y = 0.0f; }
+        position.x += velocity.x * deltaTime;
+        position.y += velocity.y * deltaTime;
+        currentRotorSpeed += (targetRotorSpeed - currentRotorSpeed) * 2.0f * deltaTime;
+        rotorRotation += currentRotorSpeed * deltaTime;
+        if (rotorRotation > 360.0f) rotorRotation -= 360.0f;
+        return;
+    }
+
     // LOGICA DO DELAY DE PARTIDA
     if (engineStartDelayTimer > 0.0f)
     {
@@ -267,17 +300,22 @@ void Player::DrawBody() const
     // -------------------------------------------------------------
     // ETAPA 3: DESENHA O HELICOPTERO REAL POR CIMA
     // -------------------------------------------------------------
+    Color tintColor = WHITE;
+    if (isDestroyed && scale > 0.5f) tintColor = GRAY; // Fica cinza apenas enquanto está caindo (fumaça/falha)
+    else if (hitTimer > 0.0f && !isDestroyed) tintColor = RED;
+    
     if (hasSprite)
     {
+        Texture2D tex = (isDestroyed && scale <= 0.5f && destroyedSprite.id != 0) ? destroyedSprite : sprite;
         Vector2 drawPos = { 
-            position.x - (sprite.width * scale) / 2.0f, 
-            position.y - (sprite.height * scale) / 2.0f 
+            position.x - (tex.width * scale) / 2.0f, 
+            position.y - (tex.height * scale) / 2.0f 
         };
-        DrawTextureEx(sprite, drawPos, 0.0f, scale, WHITE);
+        DrawTextureEx(tex, drawPos, 0.0f, scale, tintColor);
     }
     else
     {
-        DrawRectangle(position.x - 15, position.y - 15, 30, 30, GRAY);
+        DrawRectangle(position.x - 15, position.y - 15, 30, 30, isDestroyed ? GRAY : tintColor);
     }
 
     // -------------------------------------------------------------
@@ -300,11 +338,12 @@ void Player::DrawBody() const
     // -------------------------------------------------------------
     if (hasRotor)
     {
-        Rectangle sourceRec = { 0.0f, 0.0f, (float)rotorSprite.width, (float)rotorSprite.height };
-        Vector2 origin = { (rotorSprite.width * scale) / 2.0f, (rotorSprite.height * scale) / 2.0f };
-        Rectangle destRec = { position.x, position.y + (rotorOffsetY * scale), rotorSprite.width * scale, rotorSprite.height * scale };
+        Texture2D tex = (isDestroyed && scale <= 0.5f && destroyedRotorSprite.id != 0) ? destroyedRotorSprite : rotorSprite;
+        Rectangle sourceRec = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
+        Vector2 origin = { (tex.width * scale) / 2.0f, (tex.height * scale) / 2.0f };
+        Rectangle destRec = { position.x, position.y + (rotorOffsetY * scale), tex.width * scale, tex.height * scale };
         
-        DrawTexturePro(rotorSprite, sourceRec, destRec, origin, rotorRotation, WHITE);
+        DrawTexturePro(tex, sourceRec, destRec, origin, rotorRotation, isDestroyed && scale > 0.5f ? GRAY : tintColor);
     }
     else
     {
@@ -324,5 +363,31 @@ void Player::DrawBody() const
         
         // 3. Núcleo ultra-quente da bala (branco puro)
         DrawCircleV(b, 1.0f, WHITE);
+    }
+}
+
+
+
+Rectangle Player::GetHitbox() const
+{
+    if (!hasSprite) return {0,0,0,0};
+    float w = (float)sprite.width * scale * 0.4f;
+    float h = (float)sprite.height * scale * 0.8f;
+    return { position.x - w/2.0f, position.y - h/2.0f, w, h };
+}
+
+void Player::TakeDamage(int damage)
+{
+    if (isDestroyed) return;
+    hp -= damage;
+    hitTimer = 0.1f;
+    if (hp <= 0)
+    {
+        hp = 0;
+        isDestroyed = true;
+        
+        // Corta os sons do motor do helicóptero imediatamente (evita stuttering/loop quebrado)
+        if (engineLoopMusic.frameCount != 0) StopMusicStream(engineLoopMusic);
+        if (engineStartingSound.frameCount != 0) StopSound(engineStartingSound);
     }
 }

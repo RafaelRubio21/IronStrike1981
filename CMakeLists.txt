@@ -20,6 +20,7 @@ add_executable(IronStrike1981
     src/game/Game.cpp
     src/game/Player.cpp
     src/game/Tank.cpp
+    src/game/ExplosionManager.cpp
 )
 
 target_include_directories(IronStrike1981 PRIVATE src)

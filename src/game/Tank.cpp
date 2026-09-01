@@ -36,6 +36,7 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType)
     position = startPos;
     isDestroyed = false;
     isActive = true;
+    hasFired = false;
     
     // Status Individuais por Modelo
     if (type == 0) // Normal (Original)
@@ -59,6 +60,7 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType)
     
     currentFrame = 0;
     frameTimer = 0.0f;
+    currentSpeedMult = 1.0f;
     
     cannonFrame = 0;
     cannonAnimTimer = 0.0f;
@@ -218,19 +220,27 @@ void Tank::DrawTracksAndDust() const
     --------------------------------------------------- */
 }
 
-void Tank::Update(float deltaTime, Vector2 playerPos)
+void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed)
 {
     if (!isActive) return;
     
     if (hitTimer > 0.0f) hitTimer -= deltaTime;
     
     // Lógica da Parada Estratégica
-    // O tanque "pisa no freio" 0.5 segundos antes de atirar para mirar, e fica parado enquanto o tiro sai
-    bool isAiming = (!isCannonShooting && shootCooldown <= 0.5f);
-    float speedMult = (isAiming || isCannonShooting) ? 0.0f : 1.0f;
+    // O tanque avisa que vai atirar, freia suavemente (inércia), e acelera suavemente depois.
+    bool isAiming = (!isCannonShooting && shootCooldown <= 0.5f && !playerDestroyed);
+    bool shouldStop = (isAiming || isCannonShooting || playerDestroyed);
     
-    float curVelX = velocity.x * speedMult;
-    float curVelY = velocity.y * speedMult;
+    if (shouldStop) {
+        currentSpeedMult -= 2.5f * deltaTime; // Freia em 0.4s
+        if (currentSpeedMult < 0.0f) currentSpeedMult = 0.0f;
+    } else {
+        currentSpeedMult += 1.5f * deltaTime; // Acelera um pouco mais devagar
+        if (currentSpeedMult > 1.0f) currentSpeedMult = 1.0f;
+    }
+    
+    float curVelX = velocity.x * currentSpeedMult;
+    float curVelY = velocity.y * currentSpeedMult;
 
     // Movimento
     position.x += curVelX * deltaTime;
@@ -313,40 +323,44 @@ void Tank::Update(float deltaTime, Vector2 playerPos)
         // ----------------------------------------------------
         // IA do Canhão: Mirar no Jogador
         // ----------------------------------------------------
-        float dx = playerPos.x - position.x;
-        float dy = playerPos.y - position.y;
-        float targetAngle = atan2f(dy, dx) * (180.0f / PI);
-        
-        // Ajusta para o sprite que nativamente aponta para baixo (+90 graus)
-        targetAngle -= 90.0f; 
-        
-        // Lógica de Giro Suave da Torreta para o targetAngle
-        float diff = fmodf(targetAngle - cannonRotation, 360.0f);
-        if (diff > 180.0f) diff -= 360.0f;
-        if (diff < -180.0f) diff += 360.0f;
-        
-        // Interpola a rotação do canhão para o alvo suavemente
-        float turnSpeed = turretSpeed * deltaTime;
-        if (fabs(diff) < turnSpeed) cannonRotation = targetAngle;
-        else if (diff > 0.0f) cannonRotation += turnSpeed;
-        else cannonRotation -= turnSpeed;
-        
-        // ----------------------------------------------------
-        // IA do Canhão: Disparar
-        // ----------------------------------------------------
-        shootCooldown -= deltaTime;
-        if (shootCooldown <= 0.0f)
+        if (!playerDestroyed)
         {
-            // Só atira se a torreta estiver alinhada com o jogador (Tolerância de 15 graus)
-            if (fabs(diff) <= 15.0f)
+            float dx = playerPos.x - position.x;
+            float dy = playerPos.y - position.y;
+            float targetAngle = atan2f(dy, dx) * (180.0f / PI);
+            
+            // Ajusta para o sprite que nativamente aponta para baixo (+90 graus)
+            targetAngle -= 90.0f; 
+            
+            // Lógica de Giro Suave da Torreta para o targetAngle
+            float diff = fmodf(targetAngle - cannonRotation, 360.0f);
+            if (diff > 180.0f) diff -= 360.0f;
+            if (diff < -180.0f) diff += 360.0f;
+            
+            // Interpola a rotação do canhão para o alvo suavemente
+            float turnSpeed = turretSpeed * deltaTime;
+            if (fabs(diff) < turnSpeed) cannonRotation = targetAngle;
+            else if (diff > 0.0f) cannonRotation += turnSpeed;
+            else cannonRotation -= turnSpeed;
+            
+            // ----------------------------------------------------
+            // IA do Canhão: Disparar
+            // ----------------------------------------------------
+            shootCooldown -= deltaTime;
+            if (shootCooldown <= 0.0f)
             {
-                isCannonShooting = true;
-                cannonFrame = 0;
-                cannonAnimTimer = 0.0f;
-                shootCooldown = (float)GetRandomValue(30, 60) / 10.0f; // Proximo tiro em 3s a 6s
-                
-                if (tankShootingSnd.frameCount != 0) PlaySound(tankShootingSnd);
-                // Futuro: Instanciar uma bala inimiga aqui
+                // Só atira se a torreta estiver alinhada com o jogador (Tolerância de 15 graus)
+                if (fabs(diff) <= 15.0f)
+                {
+                    isCannonShooting = true;
+                    hasFired = true; // Avisa o mundo que a bala saiu!
+                    cannonFrame = 1;
+                    cannonAnimTimer = 0.0f;
+                    shootCooldown = (float)GetRandomValue(30, 60) / 10.0f; // Proximo tiro em 3s a 6s
+                    
+                    if (tankShootingSnd.frameCount != 0) PlaySound(tankShootingSnd);
+                    // Futuro: Instanciar uma bala inimiga aqui
+                }
             }
         }
         
@@ -366,21 +380,29 @@ void Tank::Update(float deltaTime, Vector2 playerPos)
             }
         }
         
-        // Animação das lagartas
-        frameTimer += deltaTime;
+        // Lógica de Animação do Corpo (a velocidade da animação acompanha o freio do tanque)
+        frameTimer += (deltaTime * currentSpeedMult);
         if (frameTimer >= 0.05f) // 20 FPS (Mais rápido e suave)
         {
             frameTimer = 0.0f;
             currentFrame++;
-            if (currentFrame >= 4) currentFrame = 0; 
+            if (currentFrame > 3) currentFrame = 0;
         }
         
-        // Mantém o som do motor tocando se o tanque estiver se movendo
+        // Mantém o som do motor tocando apenas se o tanque estiver em movimento
         if (tankMovingSnd.frameCount != 0)
         {
-            if (!IsSoundPlaying(tankMovingSnd))
+            if (currentSpeedMult > 0.1f)
             {
-                PlaySound(tankMovingSnd);
+                if (!IsSoundPlaying(tankMovingSnd))
+                {
+                    PlaySound(tankMovingSnd);
+                }
+            }
+            else if (playerDestroyed)
+            {
+                // Força o corte imediato do som do tanque se o jogo "parou"
+                if (IsSoundPlaying(tankMovingSnd)) StopSound(tankMovingSnd);
             }
         }
     }
@@ -495,3 +517,7 @@ void Tank::DrawBody() const
         }
     }
 }
+
+
+
+

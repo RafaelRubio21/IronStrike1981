@@ -14,7 +14,15 @@ public:
     // Passa o retângulo de colisão do inimigo, retorna true e remove a bala se acertou
     bool CheckBulletHits(Rectangle targetRect);
     
+    Rectangle GetHitbox() const;
+    void TakeDamage(int damage);
+    
     Vector2 GetPosition() const { return position; }
+    
+    int hp;
+    float hitTimer;
+    bool isDestroyed;
+    bool justHitGround;
 
 private:
     Vector2 position;
@@ -23,9 +31,11 @@ private:
     float friction;       // Resistencia do ar (frenagem)
     
     Texture2D sprite; // Corpo do helicoptero
+    Texture2D destroyedSprite;
     bool hasSprite;
 
     Texture2D rotorSprite; // Helice
+    Texture2D destroyedRotorSprite;
     bool hasRotor;
     float rotorOffsetY; // Ajuste vertical da helice para o jogador alterar facilmente
     

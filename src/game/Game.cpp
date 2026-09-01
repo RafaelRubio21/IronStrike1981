@@ -1,8 +1,7 @@
 #include "Game.h"
 #include <raylib.h>
+#include <cmath>
 
-static Texture2D expFrames[10] = {0};
-static bool expLoaded = false;
 static Texture2D smokeFrames[7] = {0};
 static bool smokeLoaded = false;
 static float SMOKE_OFFSET_X = 15.0f;   // Ajuste da fumaça na horizontal
@@ -20,7 +19,8 @@ void Game::Initialize()
     player.Initialize({ 1024.0f / 2.0f, 600.0f });
 
     tanks.clear();
-    explosions.clear();
+    explosionManager.Clear();
+    enemyBullets.clear();
     tankSpawnTimer = 0.0f;
 
     levelScrollY = 0.0f;
@@ -63,26 +63,7 @@ void Game::Initialize()
         }
     }
     
-    // Carrega a Animação de Explosão (Explosion2_1 até Explosion2_10)
-    if (!expLoaded)
-    {
-        const char* expPaths[] = {
-            "assets/sprites/explosions/explosion2/",
-            "../../assets/sprites/explosions/explosion2/",
-            "../../../assets/sprites/explosions/explosion2/"
-        };
-        for (int p = 0; p < 3; p++)
-        {
-            if (expFrames[0].id == 0)
-            {
-                for (int f = 0; f < 10; f++)
-                {
-                    expFrames[f] = LoadTexture(TextFormat("%sExplosion2_%d.png", expPaths[p], f + 1));
-                }
-            }
-        }
-        expLoaded = true;
-    }
+    explosionManager.Initialize();
     
     // Carrega a Animação de Fumaça (smoke1_1 até smoke1_7)
     if (!smokeLoaded)
@@ -128,6 +109,16 @@ void Game::Update(float deltaTime)
 
     player.Update(deltaTime);
     
+    // Se o player acabou de bater no chão após ser destruído, spawnar a explosão!
+    if (player.justHitGround)
+    {
+        player.justHitGround = false;
+        // Explosão 3 é a do player, um pouco maior
+        explosionManager.Spawn(player.GetPosition(), ExplosionType::PLAYER_EXPLOSION, 1.5f);
+        
+        // Se tivermos um som de explosão de player, tocaríamos aqui
+    }
+    
     // Gerador de Tanques
     tankSpawnTimer += deltaTime;
     if (tankSpawnTimer >= 2.0f) // Cria um tanque a cada 2 segundos
@@ -149,7 +140,36 @@ void Game::Update(float deltaTime)
     // Atualiza os tanques, checa colisão com tiro, e remove os inativos
     for (int i = 0; i < tanks.size(); i++)
     {
-        tanks[i].Update(deltaTime, player.GetPosition());
+        tanks[i].Update(deltaTime, player.GetPosition(), player.isDestroyed);
+        
+        // Se o tanque atirou neste frame, instanciamos a bala inimiga!
+        if (tanks[i].hasFired)
+        {
+            tanks[i].hasFired = false;
+            
+            EnemyBullet bullet;
+            // O Tank usa rotação 0 = para BAIXO (Y+)
+            float rad = tanks[i].cannonRotation * DEG2RAD;
+            Vector2 forward = { -sinf(rad), cosf(rad) };
+            
+            // Spawna na ponta do cano
+            float offset = std::abs(tanks[i].fireOffsetY);
+            bullet.position.x = tanks[i].position.x + (forward.x * offset);
+            bullet.position.y = tanks[i].position.y + (forward.y * offset);
+            
+            // Velocidade devagar (250 pixels por segundo)
+            bullet.velocity.x = forward.x * 250.0f;
+            bullet.velocity.y = forward.y * 250.0f;
+            
+            bullet.active = true;
+            bullet.trailTimer = 0.0f;
+            enemyBullets.push_back(bullet);
+        }
+        
+        if (tanks[i].isDestroyed)
+        {
+            tanks[i].hitTimer -= deltaTime;
+        }
         
         // Só tenta matar o tanque se ele já não estiver destruído
         if (!tanks[i].isDestroyed)
@@ -161,12 +181,7 @@ void Game::Update(float deltaTime)
                 // Se esse tiro acabou de destruir o tanque
                 if (tanks[i].hp <= 0 && tanks[i].isDestroyed)
                 {
-                    Explosion ex;
-                    ex.position = tanks[i].position;
-                    ex.currentFrame = 0;
-                    ex.frameTimer = 0.0f;
-                    ex.scale = 1.0f; // Pode ajustar a escala da explosão
-                    explosions.push_back(ex);
+                    explosionManager.Spawn(tanks[i].position, ExplosionType::TANK_EXPLOSION, 1.0f);
                 }
                 else
                 {
@@ -190,18 +205,53 @@ void Game::Update(float deltaTime)
     }
     
     // Anima e remove explosões
-    for (int i = 0; i < explosions.size(); i++)
+    explosionManager.Update(deltaTime);
+    
+    // Atualiza Balas Inimigas
+    for (int i = 0; i < enemyBullets.size(); i++)
     {
-        explosions[i].frameTimer += deltaTime;
-        if (explosions[i].frameTimer >= 0.05f) // 20 FPS
+        auto& b = enemyBullets[i];
+        
+        if (b.active)
         {
-            explosions[i].frameTimer = 0.0f;
-            explosions[i].currentFrame++;
-            if (explosions[i].currentFrame >= 10)
+            b.position.x += b.velocity.x * deltaTime;
+            b.position.y += b.velocity.y * deltaTime;
+            
+            // Criação do Rastro (Fumaça)
+            b.trailTimer += deltaTime;
+            if (b.trailTimer >= 0.03f) // A cada 0.03s deixa um rastro
             {
-                explosions.erase(explosions.begin() + i);
-                i--;
+                b.trailTimer = 0.0f;
+                b.trail.push_back(b.position);
+                if (b.trail.size() > 10) b.trail.erase(b.trail.begin());
             }
+            
+            // Colisão com o Jogador
+            if (!player.isDestroyed && CheckCollisionPointRec(b.position, player.GetHitbox()))
+            {
+                player.TakeDamage(20); // Bala de tanque arranca 20 de vida
+                b.active = false;
+                
+                // Explode na carcaça do player
+                explosionManager.Spawn(b.position, ExplosionType::HIT_EXPLOSION, 0.5f);
+            }
+        }
+        else
+        {
+            // Bala já explodiu, dissipar a fumaça
+            b.trailTimer += deltaTime;
+            if (b.trailTimer >= 0.03f && !b.trail.empty())
+            {
+                b.trailTimer = 0.0f;
+                b.trail.erase(b.trail.begin());
+            }
+        }
+        
+        // Destrói se sair muito da tela ou se já dissipou toda a fumaça após bater
+        if (b.position.x < -200 || b.position.x > 1200 || b.position.y < -200 || b.position.y > 1000 || (!b.active && b.trail.empty()))
+        {
+            enemyBullets.erase(enemyBullets.begin() + i);
+            i--;
         }
     }
 }
@@ -254,22 +304,33 @@ void Game::Render()
         }
     }
     
-    for (const auto& ex : explosions)
+    // Tiros Inimigos
+    for (const auto& b : enemyBullets)
     {
-        Texture2D tex = expFrames[ex.currentFrame];
-        if (tex.id != 0)
+        // Rastro (Fumaça dissipando)
+        for (int i = 0; i < (int)b.trail.size(); i++)
         {
-            float w = (float)tex.width * ex.scale;
-            float h = (float)tex.height * ex.scale;
-            Rectangle source = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
-            Rectangle dest = { ex.position.x, ex.position.y, w, h };
-            Vector2 origin = { w / 2.0f, h / 2.0f };
-            DrawTexturePro(tex, source, dest, origin, 0.0f, WHITE);
+            float alpha = (float)i / (float)b.trail.size(); // Os mais recentes são mais fortes
+            float size = alpha * 4.0f;
+            DrawCircleV(b.trail[i], size, { 80, 80, 80, (unsigned char)(alpha * 200) });
+            DrawCircleV(b.trail[i], size * 0.5f, { 255, 100, 0, (unsigned char)(alpha * 150) }); // Centro laranjinha do rastro
+        }
+        
+        if (b.active)
+        {
+            // Centro da Bala (Plasma/Fogo incandescente)
+            DrawCircleV(b.position, 7.0f, { 255, 50, 0, 255 }); // Borda laranja escuro
+            DrawCircleV(b.position, 4.0f, ORANGE);              // Laranja
+            DrawCircleV(b.position, 2.0f, WHITE);               // Centro quente
         }
     }
+    
+    explosionManager.Render();
 
     // UI DA TELA (Textos, HUD, FPS sempre desenhados por ultimo e FORA da câmera)
     DrawFPS(10, 10);
 
     EndDrawing();
+
+
 }

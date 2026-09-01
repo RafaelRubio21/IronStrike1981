@@ -21,7 +21,7 @@ class Tank
 {
 public:
     void Initialize(Vector2 startPos, int spawnDirection, int tankType = 0); 
-    void Update(float deltaTime, Vector2 playerPos);
+    void Update(float deltaTime, Vector2 playerPos, bool playerDestroyed);
     void DrawTracksAndDust() const;
     void DrawShadows() const;
     void DrawBody() const;
@@ -33,6 +33,7 @@ public:
 
     bool isDestroyed;
     bool isActive;
+    bool hasFired;
     
     int type; // Guarda o modelo do tanque
     int hp;
@@ -42,9 +43,11 @@ public:
     
     // Status individuais do tanque (podem variar por tipo)
     float speed;
+    float currentSpeedMult;
     float turretSpeed;
     float cannonOffsetY;
-    float fireOffsetY; // Ajuste da ponta do canhão para o fogo
+    float fireOffsetY;
+    float cannonRotation;
     
     int smokeFrame;
     float smokeAnimTimer;
@@ -67,5 +70,6 @@ private:
     float cannonAnimTimer;
     bool isCannonShooting;
     float shootCooldown;
-    float cannonRotation;
 };
+
+
