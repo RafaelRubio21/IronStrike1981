@@ -10,7 +10,18 @@ public:
     virtual void Update(float deltaTime, Vector2 playerPos, bool playerDestroyed) = 0;
     virtual void DrawShadows() const = 0;
     virtual void DrawBody() const = 0;
-    virtual Rectangle GetHitbox() const = 0;
+    virtual Rectangle GetHitbox() const 
+    {
+        float scaledWidth = width * scale;
+        float scaledHeight = height * scale;
+        // Assume origin (pivot) is exactly in the center for all enemies
+        return { 
+            position.x - (scaledWidth / 2.0f), 
+            position.y - (scaledHeight / 2.0f), 
+            scaledWidth, 
+            scaledHeight 
+        };
+    }
     
     // Método virtual que as classes filhas PODEM sobrescrever (ex: tocar som, limpar partículas)
     virtual void Destroy() 
@@ -82,4 +93,11 @@ public:
     float rotation = 0.0f;
     float scale = 1.0f;
     float speed = 0.0f;
+    
+    // Dimensões do inimigo (usado pela hitbox universal)
+    float width = 50.0f;
+    float height = 50.0f;
 };
+
+
+

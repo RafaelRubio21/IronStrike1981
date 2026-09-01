@@ -37,6 +37,10 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType)
     isActive = true;
     hasFired = false;
     
+    // Dimensões nativas das sprites de tanque (usado pela hitbox universal)
+    width = 67.0f;
+    height = 94.0f;
+    
     // Status Individuais por Modelo
     if (type == 0) // Normal (Original)
     {
@@ -176,13 +180,6 @@ void Tank::Destroy()
     }
 }
 
-Rectangle Tank::GetHitbox() const
-{
-    float width = 67.0f * scale;
-    float height = 94.0f * scale;
-    // Como a nossa origin é no meio, subtraímos metade para gerar o retângulo a partir do canto superior esquerdo
-    return { position.x - (width / 2.0f), position.y - (height / 2.0f), width, height };
-}
 
 void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed)
 {
@@ -451,6 +448,8 @@ void Tank::DrawBody() const
         }
     }
 }
+
+
 
 
 
