@@ -5,6 +5,15 @@
 #include <map>
 #include <nlohmann/json.hpp>
 
+
+struct EnemySpawnData {
+    std::string type;
+    int direction;
+    float x;
+    float y;
+    std::vector<Vector2> path;
+};
+
 // Estrutura para suportar tanto Tileset de 1 imagem só (spritesheet) quanto coleção de imagens (varias imagens soltas)
 struct Tileset {
     int firstGid;        
@@ -44,8 +53,12 @@ public:
 
     int GetMapWidth() const { return mapWidth; }
     int GetTileWidth() const { return tileWidth; }
+    float GetScrollY() const { return scrollY; }
+
+    std::vector<EnemySpawnData> PopReadySpawns();
 
 private:
+    std::vector<EnemySpawnData> pendingSpawns;
     bool isLoaded;
     int mapWidth;    
     int mapHeight;   
@@ -57,4 +70,6 @@ private:
     std::vector<Tileset> tilesets;
     std::vector<TileLayer> layers;
 };
+
+
 

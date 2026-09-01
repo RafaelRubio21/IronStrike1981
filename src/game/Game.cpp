@@ -104,52 +104,28 @@ void Game::Update(float deltaTime)
         // Se tivermos um som de explosão de player, tocaríamos aqui
     }
     
-    // Gerador de Tanques
-    tankSpawnTimer += deltaTime;
-    if (tankSpawnTimer >= 2.0f) // Cria um tanque a cada 2 segundos
+    // Spawn de Inimigos via Mapa do Tiled
+    std::vector<EnemySpawnData> newSpawns = mapManager.PopReadySpawns();
+    for (const auto& spawn : newSpawns)
     {
-        tankSpawnTimer = 0.0f;
-        int dir = GetRandomValue(0, 2);
-        
-        // Pega as dimensões da grade
-        int tWidth = mapManager.GetTileWidth();
-        if (tWidth == 0) tWidth = 64; // Fallback de segurança
-        int tHeight = 64; 
-        
-        auto t = std::make_unique<Tank>();
-        if (dir == 0) // Vem de cima (Move pra baixo)
+        if (spawn.type == "Tank" || spawn.type == "TankRoute")
         {
-            // Sorteia uma coluna aleatória do mapa
-            int maxCols = mapManager.GetMapWidth();
-            if (maxCols == 0) maxCols = 1024 / tWidth;
+            auto t = std::make_unique<Tank>();
             
-            // maxCols-1 pra não nascer fora da tela caso o mapa seja maior q a tela
-            if (maxCols > 15) maxCols = 15; 
+            // spawn.x e spawn.y estão em coordenadas mundiais (World Y).
+            // Precisamos converter para coordenadas de Tela (Screen Y)!
+            float screenY = spawn.y - mapManager.GetScrollY();
+            float screenX = spawn.x;
             
-            int col = GetRandomValue(1, maxCols - 2); 
-            float spawnX = (col * tWidth) + (tWidth / 2.0f);
+            // A Rota está em World Coordinates. Precisamos converter TUDO para Screen Coordinates!
+            std::vector<Vector2> screenPath;
+            for (const auto& wp : spawn.path) {
+                screenPath.push_back({ wp.x, wp.y - mapManager.GetScrollY() });
+            }
             
-            t->Initialize({ spawnX, -100.0f }, dir, 0); 
+            t->Initialize({ screenX, screenY }, spawn.direction, 0, screenPath); 
+            enemies.push_back(std::move(t));
         }
-        else if (dir == 1) // Vem da esquerda (Move pra direita)
-        {
-            // Sorteia uma linha vertical na tela, alinhada à grade de 64
-            int maxRows = 768 / tHeight;
-            int row = GetRandomValue(1, maxRows - 2);
-            float spawnY = (row * tHeight) + (tHeight / 2.0f);
-            
-            t->Initialize({ -100.0f, spawnY }, dir, 0);
-        }
-        else // Vem da direita (Move pra esquerda)
-        {
-            int maxRows = 768 / tHeight;
-            int row = GetRandomValue(1, maxRows - 2);
-            float spawnY = (row * tHeight) + (tHeight / 2.0f);
-            
-            t->Initialize({ 1124.0f, spawnY }, dir, 0);
-        }
-            
-        enemies.push_back(std::move(t));
     }
     
     // Atualiza os tanques, checa colisão com tiro, e remove os inativos
@@ -329,6 +305,7 @@ void Game::Render()
 
 
 }
+
 
 
 

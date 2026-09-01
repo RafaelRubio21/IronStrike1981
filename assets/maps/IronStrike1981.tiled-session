@@ -1,6 +1,7 @@
 {
     "activeFile": "",
     "expandedProjectPaths": [
+        "."
     ],
     "fileStates": {
         "": {
@@ -36,18 +37,33 @@
             "scaleInDock": 1,
             "scaleInEditor": 1
         },
+        "level1.json": {
+            "scale": 1,
+            "selectedLayer": 4,
+            "viewCenter": {
+                "x": 525.5,
+                "y": 5730
+            }
+        },
         "level1.json#agua": {
             "scaleInEditor": 1
         },
         "level1.json#asphalt": {
             "dynamicWrapping": true,
+            "scaleInDock": 1,
             "scaleInEditor": 1
         },
+        "level1.json#buildings": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1
+        },
         "level1.json#grass": {
-            "dynamicWrapping": false
+            "dynamicWrapping": false,
+            "scaleInDock": 1
         },
         "level1.json#water": {
-            "dynamicWrapping": true
+            "dynamicWrapping": true,
+            "scaleInDock": 1
         },
         "level1.tmj": {
             "scale": 0.66203125,
@@ -62,7 +78,8 @@
         }
     },
     "last.externalTilesetPath": "D:/Projetos/IronStrike1981/assets/maps/Water",
-    "last.imagePath": "D:/Projetos/IronStrike1981/assets/maps/Water",
+    "last.imagePath": "D:/Projetos/IronStrike1981/assets/maps/SmallHouses",
+    "last.objectTemplatePath": "D:/Projetos/IronStrike1981/assets/maps",
     "map.lastUsedFormat": "json",
     "map.tileHeight": 64,
     "map.tileWidth": 64,
@@ -70,7 +87,9 @@
     "openFiles": [
     ],
     "project": "IronStrike1981.tiled-project",
+    "property.type": "int",
     "recentFiles": [
+        "level1.json",
         "Asphalt/asphalt.tsx",
         "Water/water.tsj",
         "Grass/grass.tsx",

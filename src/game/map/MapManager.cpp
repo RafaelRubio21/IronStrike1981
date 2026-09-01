@@ -70,6 +70,8 @@ bool MapManager::Load(const std::string& jsonFilePath)
         }
     }
 
+    pendingSpawns.clear();
+
     for (const auto& layer : j["layers"]) {
         if (layer["type"] == "tilelayer") {
             TileLayer tl;
@@ -84,6 +86,44 @@ bool MapManager::Load(const std::string& jsonFilePath)
             }
             
             layers.push_back(tl);
+        }
+        else if (layer["type"] == "objectgroup") {
+            if (layer.contains("objects")) {
+                for (const auto& obj : layer["objects"]) {
+                    EnemySpawnData spawn;
+                    spawn.x = obj.value("x", 0.0f);
+                    spawn.y = obj.value("y", 0.0f);
+                    
+                    if (obj.contains("type") && obj["type"].is_string()) {
+                        spawn.type = obj["type"].get<std::string>();
+                    } else if (obj.contains("class") && obj["class"].is_string()) { // Tiled newer versions
+                        spawn.type = obj["class"].get<std::string>();
+                    } else {
+                        spawn.type = "Tank"; // fallback
+                    }
+                    
+                    spawn.direction = 0;
+                    if (obj.contains("properties")) {
+                        for (const auto& prop : obj["properties"]) {
+                            if (prop["name"] == "direction") {
+                                spawn.direction = prop.value("value", 0);
+                            }
+                        }
+                    }
+                    
+                    if (obj.contains("polyline")) {
+                        for (const auto& pt : obj["polyline"]) {
+                            float px = spawn.x;
+                            float py = spawn.y;
+                            if (pt.contains("x")) px += pt["x"].get<float>();
+                            if (pt.contains("y")) py += pt["y"].get<float>();
+                            spawn.path.push_back({ px, py });
+                        }
+                    }
+                    
+                    pendingSpawns.push_back(spawn);
+                }
+            }
         }
     }
 
@@ -107,11 +147,14 @@ void MapManager::Render() const
     const float screenWidth = 1024.0f;
     const float screenHeight = 768.0f;
 
-    int startY = (int)(scrollY / tileHeight);
-    int endY = startY + (int)(screenHeight / tileHeight) + 2;
+    // Margem de segurança para desenhar construções grandes que ultrapassam o tamanho de 1 bloco (64x64)
+    int margin = 5; 
+
+    int startY = (int)(scrollY / tileHeight) - margin;
+    int endY = (int)(scrollY / tileHeight) + (int)(screenHeight / tileHeight) + margin;
     
-    int startX = 0;
-    int endX = (int)(screenWidth / tileWidth) + 2;
+    int startX = 0 - margin;
+    int endX = (int)(screenWidth / tileWidth) + margin;
 
     if (startY < 0) startY = 0;
     if (endY > mapHeight) endY = mapHeight;
@@ -190,3 +233,18 @@ void MapManager::Unload()
     isLoaded = false;
 }
 
+
+std::vector<EnemySpawnData> MapManager::PopReadySpawns()
+{
+    std::vector<EnemySpawnData> readySpawns;
+    // Iterate backwards so we can safely erase
+    for (int i = (int)pendingSpawns.size() - 1; i >= 0; i--) {
+        // Se a posição Y mundial do tanque for >= a posição da Câmera, 
+        // significa que ele entrou na parte superior da tela (ou já estava dentro)
+        if (pendingSpawns[i].y >= scrollY - 50.0f) {
+            readySpawns.push_back(pendingSpawns[i]);
+            pendingSpawns.erase(pendingSpawns.begin() + i);
+        }
+    }
+    return readySpawns;
+}

@@ -22,7 +22,7 @@ struct DustParticle {
 class Tank : public EnemyBase
 {
 public:
-    void Initialize(Vector2 startPos, int spawnDirection, int tankType = 0); 
+    void Initialize(Vector2 startPos, int spawnDirection, int tankType = 0, std::vector<Vector2> path = {}); 
     void Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, float scrollSpeed = 0.0f) override;
     void DrawShadows() const override;
     void DrawBody() const override;
@@ -42,6 +42,8 @@ public:
     float dustSpawnTimer;
 
 private:
+    std::vector<Vector2> waypoints;
+    int currentWaypoint;
     int currentFrame;
     float frameTimer;
     
@@ -50,6 +52,7 @@ private:
     bool isCannonShooting;
     float turretAngularVel; // Velocidade angular atual da torreta (inércia)
 };
+
 
 
 

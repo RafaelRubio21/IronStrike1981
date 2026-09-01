@@ -29,7 +29,7 @@ static Sound tankMovingSnd = {0};
 static Sound tankShootingSnd = {0};
 static bool tankAudioLoaded = false;
 
-void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType)
+void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::vector<Vector2> path)
 {
     type = tankType;
     position = startPos;
@@ -88,6 +88,14 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType)
     {
         velocity = { -speed, 0.0f };
         rotation = 90.0f;
+    }
+    
+    waypoints = path;
+    currentWaypoint = 0;
+    
+    // Se tivermos waypoints, pulamos o primeiro (pois é onde nascemos)
+    if (waypoints.size() > 1) {
+        currentWaypoint = 1;
     }
     
     cannonRotation = rotation;
@@ -222,6 +230,36 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, floa
         if (currentSpeedMult > 1.0f) currentSpeedMult = 1.0f;
     }
     
+    // Rola os waypoints para baixo na tela, para que eles fiquem grudados no chão do mapa!
+    for (int i = 0; i < waypoints.size(); i++) {
+        waypoints[i].y += scrollSpeed * deltaTime;
+    }
+
+    // NAVEGAÇÃO POR WAYPOINTS
+    if (!waypoints.empty() && currentWaypoint < waypoints.size()) {
+        Vector2 target = waypoints[currentWaypoint];
+        
+        // Direção até o waypoint
+        float dx = target.x - position.x;
+        float dy = target.y - position.y;
+        float dist = sqrt(dx*dx + dy*dy);
+        
+        if (dist < 5.0f) {
+            // Chegamos no waypoint! Pula pro próximo
+            currentWaypoint++;
+        } else {
+            // Ajusta a velocidade para ir direto pro waypoint na velocidade máxima (60.0f)
+            float speed = 60.0f;
+            velocity.x = (dx / dist) * speed;
+            velocity.y = (dy / dist) * speed;
+            
+            // Gira o chassi do tanque pra apontar pro waypoint
+            // atan2 retorna em radianos, converte pra graus. +90 pq o tanque base aponta pra cima
+            float targetRot = atan2(dy, dx) * 180.0f / PI + 90.0f;
+            rotation = targetRot; 
+        }
+    }
+
     // Salva velocidade original e aplica o multiplicador de inércia antes do BaseUpdate
     Vector2 originalVel = velocity;
     velocity.x *= currentSpeedMult;
@@ -403,6 +441,20 @@ void Tank::DrawShadows() const
 void Tank::DrawBody() const
 {
     if (!isActive || !tankTexturesLoaded) return;
+    
+    // DEBUG: Desenha os waypoints do tanque! (Descomente se precisar testar rotas no futuro)
+    /*
+    if (!isDestroyed && !waypoints.empty() && currentWaypoint < waypoints.size()) {
+        for (int i = currentWaypoint; i < waypoints.size(); i++) {
+            DrawCircle((int)waypoints[i].x, (int)waypoints[i].y, 5, RED);
+            if (i > currentWaypoint) {
+                DrawLineEx(waypoints[i-1], waypoints[i], 2.0f, RED);
+            } else {
+                DrawLineEx(position, waypoints[i], 2.0f, RED);
+            }
+        }
+    }
+    */
     
     // Corpo
     Texture2D tex = isDestroyed ? tankDestroyedFrame[type] : tankFrames[type][currentFrame];
