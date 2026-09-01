@@ -275,7 +275,7 @@ void Game::Render()
     
     BeginMode2D(camera);
         // Quando criarmos as tilesets (chao e agua), desenhamos elas aqui embaixo!
-        for (const auto& t : tanks) t.DrawTracksAndDust();
+        
     EndMode2D();
 
     // ETAPA 3: CARIMBA O CANVAS DE SOMBRAS UNIFICADO

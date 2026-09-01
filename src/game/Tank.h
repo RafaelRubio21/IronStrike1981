@@ -24,7 +24,6 @@ class Tank : public EnemyBase
 public:
     void Initialize(Vector2 startPos, int spawnDirection, int tankType = 0); 
     void Update(float deltaTime, Vector2 playerPos, bool playerDestroyed) override;
-    void DrawTracksAndDust() const;
     void DrawShadows() const override;
     void DrawBody() const override;
     
