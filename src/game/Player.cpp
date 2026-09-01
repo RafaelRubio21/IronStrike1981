@@ -396,3 +396,24 @@ void Player::TakeDamage(int damage)
     }
 }
 
+
+
+void Player::Unload()
+{
+    if (sprite.id != 0) { UnloadTexture(sprite); sprite.id = 0; }
+    if (destroyedSprite.id != 0) { UnloadTexture(destroyedSprite); destroyedSprite.id = 0; }
+    if (rotorSprite.id != 0) { UnloadTexture(rotorSprite); rotorSprite.id = 0; }
+    if (destroyedRotorSprite.id != 0) { UnloadTexture(destroyedRotorSprite); destroyedRotorSprite.id = 0; }
+    if (machineGunSprite.id != 0) { UnloadTexture(machineGunSprite); machineGunSprite.id = 0; }
+    hasSprite = false;
+    hasRotor = false;
+    hasMachineGun = false;
+
+    if (engineStartingSound.frameCount != 0) { UnloadSound(engineStartingSound); engineStartingSound = {}; }
+    if (mgShootSound.frameCount != 0) { UnloadSound(mgShootSound); mgShootSound = {}; }
+    if (mgFinalShotSound.frameCount != 0) { UnloadSound(mgFinalShotSound); mgFinalShotSound = {}; }
+    if (engineLoopMusic.frameCount != 0) { UnloadMusicStream(engineLoopMusic); engineLoopMusic = {}; }
+    engineLoopActive = false;
+
+    bullets.clear();
+}

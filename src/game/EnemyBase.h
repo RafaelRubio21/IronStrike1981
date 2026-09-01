@@ -1,5 +1,6 @@
 #pragma once
 #include "raylib.h"
+#include <cmath>
 
 class EnemyBase
 {
@@ -21,7 +22,9 @@ public:
         float scaledWidth = (width * scale) * hitScale;
         float scaledHeight = (height * scale) * hitScale;
         
-        if (std::abs(rotation) > 45.0f)
+        // Ângulo módulo 180: 170 graus deixa o sprite tão "de pé" quanto 10 graus
+        float angle = std::fmod(std::fabs(rotation), 180.0f);
+        if (angle > 45.0f && angle < 135.0f)
         {
             float temp = scaledWidth;
             scaledWidth = scaledHeight;

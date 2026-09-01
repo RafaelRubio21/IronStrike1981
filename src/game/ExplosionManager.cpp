@@ -102,3 +102,23 @@ void ExplosionManager::Clear()
 
 
 
+
+
+void ExplosionManager::Unload()
+{
+    explosions.clear();
+
+    for (int t = 0; t < 4; t++)
+    {
+        for (int f = 0; f < 10; f++)
+        {
+            if (expFrames[t][f].id != 0)
+            {
+                UnloadTexture(expFrames[t][f]);
+                expFrames[t][f].id = 0;
+            }
+        }
+    }
+
+    isLoaded = false;
+}

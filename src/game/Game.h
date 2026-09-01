@@ -31,14 +31,14 @@ private:
     float tankSpawnTimer;
     
     Camera2D camera;
-    float levelScrollY; // O mapa desce, dando a ilusao de voar para cima
     float scrollSpeed;
     
     Music bgMusic; // Musica de Fundo
     float bgMusicVolume;
     float bgMusicTargetVolume;
     
-    Sound impactSounds[5]; // Sons genericos de metal
+    static constexpr int IMPACT_SOUND_COUNT = 5;
+    Sound impactSounds[IMPACT_SOUND_COUNT]; // Sons genericos de metal
     
     RenderTexture2D globalShadowTarget; // O grande canvas global de sombras unificadas!
 };

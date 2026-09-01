@@ -10,13 +10,19 @@ int main()
     InitAudioDevice(); // Inicia o Motor de Som (Hardware)
     SetTargetFPS(60);
 
-    Game game;
-    game.Initialize();
-
-    while (!WindowShouldClose())
+    // O Game vive num escopo próprio: ele precisa liberar texturas e sons
+    // ENQUANTO a janela e o dispositivo de áudio ainda existem.
     {
-        game.Update(GetFrameTime());
-        game.Render();
+        Game game;
+        game.Initialize();
+
+        while (!WindowShouldClose())
+        {
+            game.Update(GetFrameTime());
+            game.Render();
+        }
+
+        game.Shutdown();
     }
 
     CloseAudioDevice(); // Desliga a placa de som

@@ -3,20 +3,6 @@
 
 #include <vector>
 
-struct TrackMark {
-    Vector2 position;
-    float rotation;
-    float lifeTime;
-};
-
-struct DustParticle {
-    Vector2 position;
-    Vector2 velocity;
-    float lifeTime;
-    float maxLife;
-    float radius;
-};
-
 #include "EnemyBase.h"
 
 class Tank : public EnemyBase
@@ -30,17 +16,15 @@ public:
     void Destroy() override;
     Rectangle GetHitbox() const override;
 
+    // Libera as texturas e sons compartilhados por TODOS os tanques.
+    // Precisa rodar antes de CloseWindow(), enquanto o contexto gráfico ainda existe.
+    static void UnloadSharedAssets();
+
     // Status individuais do tanque (podem variar por tipo)
     float currentSpeedMult;
     float turretSpeed;
     float cannonOffsetY;
     
-    std::vector<TrackMark> tracks;
-    float trackSpawnTimer;
-    
-    std::vector<DustParticle> dustParticles;
-    float dustSpawnTimer;
-
 private:
     std::vector<Vector2> waypoints;
     int currentWaypoint;

@@ -8,12 +8,6 @@ static float TANK_VOL_EXPLOSION = 0.5f;   // Volume da explosão (0.0 a 1.0)
 static float TANK_VOL_ENGINE = 0.15f;     // Volume do motor (0.0 a 1.0)
 static float TANK_VOL_SHOOTING = 0.4f;    // Volume do tiro inimigo (0.0 a 1.0)
 
-// Configuração das Partículas (Poeira e Rastros)
-static float TANK_DUST_RATE = 0.05f;       // Frequencia que a poeira nasce (menor = mais denso)
-static float TANK_DUST_OFFSET = 20.0f;     // Distancia do centro do tanque até a lagarta (traseira)
-static float TANK_DUST_SPREAD = 15.0f;     // O quão caótico/largo é o espalhamento
-static float TANK_DUST_MIN_RADIUS = 4.0f;  // Tamanho inicial mínimo da poeira
-static float TANK_DUST_MAX_RADIUS = 10.0f; // Tamanho inicial máximo
 // =================================================================
 
 // Suporte para 2 modelos de tanque (0 = Normal, 1 = Pesado)
@@ -113,11 +107,6 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::v
     smokeFrame = GetRandomValue(0, 6);
     smokeAnimTimer = 0.0f;
     
-    tracks.clear();
-    trackSpawnTimer = 0.0f;
-    dustParticles.clear();
-    dustSpawnTimer = 0.0f;
-    
     if (!tankTexturesLoaded)
     {
         const char* basePaths[] = {
@@ -200,6 +189,37 @@ void Tank::Destroy()
 
 
 
+void Tank::UnloadSharedAssets()
+{
+    if (tankTexturesLoaded)
+    {
+        for (int t = 0; t < 2; t++)
+        {
+            for (int f = 0; f < 4; f++)
+            {
+                if (tankFrames[t][f].id != 0) { UnloadTexture(tankFrames[t][f]); tankFrames[t][f].id = 0; }
+            }
+            for (int f = 0; f < 3; f++)
+            {
+                if (cannonFrames[t][f].id != 0) { UnloadTexture(cannonFrames[t][f]); cannonFrames[t][f].id = 0; }
+                if (fireFrames[t][f].id != 0) { UnloadTexture(fireFrames[t][f]); fireFrames[t][f].id = 0; }
+            }
+            if (tankDestroyedFrame[t].id != 0) { UnloadTexture(tankDestroyedFrame[t]); tankDestroyedFrame[t].id = 0; }
+            if (cannonDestroyedFrame[t].id != 0) { UnloadTexture(cannonDestroyedFrame[t]); cannonDestroyedFrame[t].id = 0; }
+        }
+        tankTexturesLoaded = false;
+    }
+
+    if (tankAudioLoaded)
+    {
+        if (tankExplodingSnd.frameCount != 0) { UnloadSound(tankExplodingSnd); tankExplodingSnd = {}; }
+        if (tankMovingSnd.frameCount != 0) { UnloadSound(tankMovingSnd); tankMovingSnd = {}; }
+        if (tankShootingSnd.frameCount != 0) { UnloadSound(tankShootingSnd); tankShootingSnd = {}; }
+        tankAudioLoaded = false;
+    }
+}
+
+
 Rectangle Tank::GetHitbox() const
 {
     // A imagem original é 67x94.
@@ -207,8 +227,10 @@ Rectangle Tank::GetHitbox() const
     float hitWidth = 45.0f * scale;
     float hitHeight = 70.0f * scale;
 
-    // MAGIA AQUI: Se a imagem rotacionar 90 graus, a largura e altura da hitbox invertem!
-    if (rotation <= -hitWidth || rotation >= hitWidth)
+    // Se o sprite estiver mais perto da horizontal que da vertical, largura e altura invertem.
+    // Usamos o ângulo módulo 180 porque 170 graus deixa o tanque tão "de pé" quanto 10 graus.
+    float angle = fmodf(fabsf(rotation), 180.0f);
+    if (angle > 45.0f && angle < 135.0f)
     {
         float temp = hitWidth;
         hitWidth = hitHeight;
@@ -246,12 +268,12 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, floa
     }
 
     // Rola os waypoints para baixo na tela, para que eles fiquem grudados no chão do mapa!
-    for (int i = 0; i < waypoints.size(); i++) {
-        waypoints[i].y += scrollSpeed * deltaTime;
+    for (auto& wp : waypoints) {
+        wp.y += scrollSpeed * deltaTime;
     }
 
     // NAVEGAÇÃO POR WAYPOINTS
-    if (!isDestroyed && !waypoints.empty() && currentWaypoint < waypoints.size()) {
+    if (!isDestroyed && currentWaypoint >= 0 && currentWaypoint < (int)waypoints.size()) {
         Vector2 target = waypoints[currentWaypoint];
         
         // Direção até o waypoint
@@ -269,21 +291,27 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, floa
                 waypoints.push_back({ targetX, targetY });
                 currentWaypoint = 0;
             } else {
-                // Efeito Ping-Pong (Bate e Volta) na Rota
+                // Efeito Ping-Pong (Bate e Volta) na Rota.
+                // O cast para int é obrigatório: comparar um int negativo direto com
+                // waypoints.size() (unsigned) promoveria o -1 para um número gigante,
+                // e o ramo "currentWaypoint < 0" nunca seria alcançado.
+                const int lastIndex = (int)waypoints.size() - 1;
                 currentWaypoint += pathDirection;
-                if (currentWaypoint >= waypoints.size()) {
+
+                if (currentWaypoint > lastIndex) {
                     pathDirection = -1;
-                    currentWaypoint = waypoints.size() - 2;
-                    if (currentWaypoint < 0) currentWaypoint = 0; // Prevenção de bug se a rota tiver só 1 ponto
+                    currentWaypoint = lastIndex - 1;
                 } else if (currentWaypoint < 0) {
                     pathDirection = 1;
                     currentWaypoint = 1;
-                    if (currentWaypoint >= waypoints.size()) currentWaypoint = waypoints.size() - 1;
                 }
+
+                // Rotas de 1 ou 2 pontos: mantém o índice dentro da faixa válida
+                if (currentWaypoint < 0) currentWaypoint = 0;
+                if (currentWaypoint > lastIndex) currentWaypoint = lastIndex;
             }
         } else {
-            // Ajusta a velocidade para ir direto pro waypoint na velocidade máxima (60.0f)
-            float speed = 60.0f;
+            // Usa a velocidade do modelo (o Pesado é mais lento que o Normal)
             velocity.x = (dx / dist) * speed;
             velocity.y = (dy / dist) * speed;
             
@@ -306,32 +334,8 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, floa
     // (Se estiver destruído, o atrito do BaseUpdate precisa permanecer!)
     if (!isDestroyed) velocity = originalVel;
     
-    // Atualiza vida das partículas
-    for (int i = 0; i < tracks.size(); i++) {
-        tracks[i].lifeTime -= deltaTime;
-        tracks[i].position.y += scrollSpeed * deltaTime;
-        if (tracks[i].lifeTime <= 0) { tracks.erase(tracks.begin() + i); i--; }
-    }
-    
-    for (int i = 0; i < dustParticles.size(); i++) {
-        dustParticles[i].lifeTime -= deltaTime;
-        dustParticles[i].position.y += scrollSpeed * deltaTime;
-        dustParticles[i].position.x += dustParticles[i].velocity.x * deltaTime;
-        dustParticles[i].position.y += dustParticles[i].velocity.y * deltaTime;
-        dustParticles[i].radius += 10.0f * deltaTime; // Poeira espalha
-        if (dustParticles[i].lifeTime <= 0) { dustParticles.erase(dustParticles.begin() + i); i--; }
-    }
-    
-    // Spawna partículas se o tanque estiver se movendo rápido o suficiente
-    float curVelX = velocity.x * currentSpeedMult;
-    float curVelY = velocity.y * currentSpeedMult;
-    float speedSqr = (curVelX * curVelX) + (curVelY * curVelY);
-        
-    if (isDestroyed)
-    {
-        // A animação de fumaça agora é feita automaticamente pelo EnemyBase::BaseUpdate()
-    }
-    else
+    // A animação de fumaça do tanque destruído roda no EnemyBase::BaseUpdate()
+    if (!isDestroyed)
     {
         // ----------------------------------------------------
         // IA do Canhão: Mirar no Jogador

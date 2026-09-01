@@ -28,6 +28,9 @@ public:
     void Render() const;
     void Clear();
 
+    // Libera os frames. Precisa rodar antes de CloseWindow().
+    void Unload();
+
 private:
     std::vector<ExplosionInstance> explosions;
     

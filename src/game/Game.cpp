@@ -26,7 +26,6 @@ void Game::Initialize()
         }
     }
 
-    levelScrollY = 0.0f;
     scrollSpeed = 50.0f; // Pixels por segundo
     
     // Inicia o Canvas Global de Sombras do jogo
@@ -54,7 +53,7 @@ void Game::Initialize()
         "../../../assets/audio/metal_impact/"
     };
     
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < IMPACT_SOUND_COUNT; i++)
     {
         impactSounds[i].frameCount = 0; // Zera para segurança
         for (int p = 0; p < 3; p++)
@@ -89,7 +88,6 @@ void Game::Update(float deltaTime)
     }
 
     // Rola o cenario
-    levelScrollY += scrollSpeed * deltaTime;
     mapManager.Update(deltaTime, scrollSpeed);
 
     player.Update(deltaTime);
@@ -137,19 +135,11 @@ void Game::Update(float deltaTime)
                     screenPath.push_back({ wp.x, wp.y - mapManager.GetScrollY() });
                 }
 
-                // Fábrica de Inimigos
-                if (spawn.enemyType == "TANK" || spawn.enemyType == "Tank" || spawn.enemyType.empty())
-                {
-                    auto t = std::make_unique<Tank>();
-                    t->Initialize({ screenX, screenY }, spawn.direction, 0, screenPath, patrolArea); 
-                    enemies.push_back(std::move(t));
-                }
-                else 
-                {
-                    auto t = std::make_unique<Tank>(); // Fallback
-                    t->Initialize({ screenX, screenY }, spawn.direction, 0, screenPath, patrolArea); 
-                    enemies.push_back(std::move(t));
-                }
+                // Fábrica de Inimigos: hoje todo enemyType cai no Tank.
+                // Quando existir um segundo inimigo, é aqui que o tipo escolhe a classe.
+                auto t = std::make_unique<Tank>();
+                t->Initialize({ screenX, screenY }, spawn.direction, 0, screenPath, patrolArea);
+                enemies.push_back(std::move(t));
             }
         }
     }
@@ -230,7 +220,7 @@ void Game::Update(float deltaTime)
                 else
                 {
                     // Escolhe 1 dos 5 sons de impacto aleatoriamente (só se não explodiu)
-                    int randSfx = GetRandomValue(0, 4);
+                    int randSfx = GetRandomValue(0, IMPACT_SOUND_COUNT - 1);
                     if (impactSounds[randSfx].frameCount != 0)
                     {
                         SetSoundVolume(impactSounds[randSfx], 0.7f);
@@ -252,43 +242,21 @@ void Game::Update(float deltaTime)
     explosionManager.Update(deltaTime, scrollSpeed);
     
     // Atualiza Balas Inimigas
-    for (int i = 0; i < enemyBullets.size(); i++)
+    for (int i = 0; i < (int)enemyBullets.size(); i++)
     {
         auto& b = enemyBullets[i];
         
-        if (b.active)
+        // Movimento e rastro ficam dentro do próprio EnemyBullet
+        b.Update(deltaTime);
+        
+        // Colisão com o Jogador
+        if (b.active && !player.isDestroyed && CheckCollisionPointRec(b.position, player.GetHitbox()))
         {
-            b.position.x += b.velocity.x * deltaTime;
-            b.position.y += b.velocity.y * deltaTime;
+            player.TakeDamage(20); // Bala de tanque arranca 20 de vida
+            b.OnHit();
             
-            // Criação do Rastro (Fumaça)
-            b.trailTimer += deltaTime;
-            if (b.trailTimer >= 0.03f) // A cada 0.03s deixa um rastro
-            {
-                b.trailTimer = 0.0f;
-                b.trail.push_back(b.position);
-                if (b.trail.size() > 10) b.trail.erase(b.trail.begin());
-            }
-            
-            // Colisão com o Jogador
-            if (!player.isDestroyed && CheckCollisionPointRec(b.position, player.GetHitbox()))
-            {
-                player.TakeDamage(20); // Bala de tanque arranca 20 de vida
-                b.active = false;
-                
-                // Explode na carcaça do player
-                explosionManager.Spawn(b.position, ExplosionType::TYPE_0, 0.5f);
-            }
-        }
-        else
-        {
-            // Bala já explodiu, dissipar a fumaça
-            b.trailTimer += deltaTime;
-            if (b.trailTimer >= 0.03f && !b.trail.empty())
-            {
-                b.trailTimer = 0.0f;
-                b.trail.erase(b.trail.begin());
-            }
+            // Explode na carcaça do player
+            explosionManager.Spawn(b.position, ExplosionType::TYPE_0, 0.5f);
         }
         
         // Destrói se sair muito da tela ou se já dissipou toda a fumaça após bater
@@ -358,9 +326,26 @@ void Game::Render()
 }
 
 
+void Game::Shutdown()
+{
+    // Tudo aqui precisa rodar ANTES de CloseWindow()/CloseAudioDevice(),
+    // senão liberamos texturas com o contexto gráfico já destruído.
+    enemies.clear();
+    enemyBullets.clear();
 
+    if (bgMusic.frameCount != 0) UnloadMusicStream(bgMusic);
 
+    for (int i = 0; i < IMPACT_SOUND_COUNT; i++)
+    {
+        if (impactSounds[i].frameCount != 0) UnloadSound(impactSounds[i]);
+    }
 
+    UnloadRenderTexture(globalShadowTarget);
 
-
+    player.Unload();
+    Tank::UnloadSharedAssets();
+    explosionManager.Unload();
+    smokeManager.Unload();
+    mapManager.Unload();
+}
 

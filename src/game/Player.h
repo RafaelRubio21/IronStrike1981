@@ -16,6 +16,9 @@ public:
     
     Rectangle GetHitbox() const;
     void TakeDamage(int damage);
+
+    // Libera sprites e sons. Precisa rodar antes de CloseWindow().
+    void Unload();
     
     Vector2 GetPosition() const { return position; }
     

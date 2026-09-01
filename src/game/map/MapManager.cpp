@@ -85,6 +85,14 @@ bool MapManager::Load(const std::string& jsonFilePath)
                 tl.data.push_back(d.get<int>());
             }
             
+            // Um mapa inconsistente do Tiled estouraria o vetor no Render()
+            const size_t expected = (size_t)mapWidth * (size_t)mapHeight;
+            if (tl.data.size() != expected) {
+                std::cerr << "[MapManager] Aviso: camada '" << tl.name << "' tem "
+                          << tl.data.size() << " tiles, esperado " << expected << ". Ajustando." << std::endl;
+                tl.data.resize(expected, 0);
+            }
+
             layers.push_back(tl);
         }
         else if (layer["type"] == "objectgroup") {
@@ -173,6 +181,7 @@ void MapManager::Render() const
     int endX = (int)(screenWidth / tileWidth) + margin;
 
     if (startY < 0) startY = 0;
+    if (startX < 0) startX = 0; // sem isso, tileIndex fica negativo e lê fora do vetor
     if (endY > mapHeight) endY = mapHeight;
     if (endX > mapWidth) endX = mapWidth;
 
