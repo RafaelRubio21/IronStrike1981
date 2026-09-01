@@ -278,22 +278,24 @@ void Player::DrawShadows() const
 
     if (hasSprite)
     {
+        Texture2D tex = (isDestroyed && scale <= 0.5f && destroyedSprite.id != 0) ? destroyedSprite : sprite;
         Vector2 shadowDrawPos = { 
-            position.x + shadowOffset.x - (sprite.width * scale) / 2.0f, 
-            position.y + shadowOffset.y - (sprite.height * scale) / 2.0f 
+            position.x + shadowOffset.x - (tex.width * scale) / 2.0f, 
+            position.y + shadowOffset.y - (tex.height * scale) / 2.0f 
         };
         // Atenção: O Alpha quem controla agora é o Game.cpp no Framebuffer Global
         // Aqui desenhamos preto 100% solido (BLACK)
-        DrawTextureEx(sprite, shadowDrawPos, 0.0f, scale, BLACK);
+        DrawTextureEx(tex, shadowDrawPos, 0.0f, scale, BLACK);
     }
 
     if (hasRotor)
     {
-        Rectangle sourceRec = { 0.0f, 0.0f, (float)rotorSprite.width, (float)rotorSprite.height };
-        Vector2 origin = { (rotorSprite.width * scale) / 2.0f, (rotorSprite.height * scale) / 2.0f };
-        Rectangle shadowDestRec = { position.x + shadowOffset.x, position.y + shadowOffset.y + (rotorOffsetY * scale), rotorSprite.width * scale, rotorSprite.height * scale };
+        Texture2D tex = (isDestroyed && scale <= 0.5f && destroyedRotorSprite.id != 0) ? destroyedRotorSprite : rotorSprite;
+        Rectangle sourceRec = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
+        Vector2 origin = { (tex.width * scale) / 2.0f, (tex.height * scale) / 2.0f };
+        Rectangle shadowDestRec = { position.x + shadowOffset.x, position.y + shadowOffset.y + (rotorOffsetY * scale), tex.width * scale, tex.height * scale };
         
-        DrawTexturePro(rotorSprite, sourceRec, shadowDestRec, origin, rotorRotation, BLACK);
+        DrawTexturePro(tex, sourceRec, shadowDestRec, origin, rotorRotation, BLACK);
     }
 }
 
