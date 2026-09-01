@@ -462,15 +462,64 @@
                          "y":0
                         }, 
                         {
-                         "x":510,
-                         "y":-1
+                         "x":146.982591876209,
+                         "y":-0.551020408163265
+                        }, 
+                        {
+                         "x":149,
+                         "y":134.448979591837
+                        }, 
+                        {
+                         "x":266,
+                         "y":131.448979591837
+                        }, 
+                        {
+                         "x":266,
+                         "y":-1.55102040816291
+                        }, 
+                        {
+                         "x":394,
+                         "y":-0.551020408162913
+                        }, 
+                        {
+                         "x":396,
+                         "y":129.448979591837
+                        }],
+                 "properties":[
+                        {
+                         "name":"EnemyType",
+                         "type":"string",
+                         "value":"TANK"
                         }],
                  "rotation":0,
-                 "type":"TankRoute",
+                 "type":"EnemyRoute",
                  "visible":true,
                  "width":0,
-                 "x":160,
-                 "y":5475
+                 "x":124,
+                 "y":5520.55102040816
+                }, 
+                {
+                 "height":382,
+                 "id":66,
+                 "name":"",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"EnemyType",
+                         "type":"string",
+                         "value":"TANK"
+                        }, 
+                        {
+                         "name":"Quantity",
+                         "type":"int",
+                         "value":2
+                        }],
+                 "rotation":0,
+                 "type":"EnemyPatrol",
+                 "visible":true,
+                 "width":382,
+                 "x":515,
+                 "y":4808
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -479,7 +528,7 @@
          "y":0
         }],
  "nextlayerid":7,
- "nextobjectid":66,
+ "nextobjectid":68,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",

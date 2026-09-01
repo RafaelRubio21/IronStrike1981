@@ -91,8 +91,11 @@ bool MapManager::Load(const std::string& jsonFilePath)
             if (layer.contains("objects")) {
                 for (const auto& obj : layer["objects"]) {
                     EnemySpawnData spawn;
-                    spawn.x = obj.value("x", 0.0f);
-                    spawn.y = obj.value("y", 0.0f);
+                    spawn.x = obj.contains("x") ? obj["x"].get<float>() : 0.0f;
+                    spawn.y = obj.contains("y") ? obj["y"].get<float>() : 0.0f;
+                    spawn.width = obj.contains("width") ? obj["width"].get<float>() : 0.0f;
+                    spawn.height = obj.contains("height") ? obj["height"].get<float>() : 0.0f;
+                    spawn.quantity = 1; // Default
                     
                     if (obj.contains("type") && obj["type"].is_string()) {
                         spawn.type = obj["type"].get<std::string>();
@@ -108,7 +111,20 @@ bool MapManager::Load(const std::string& jsonFilePath)
                             if (prop["name"] == "direction") {
                                 spawn.direction = prop.value("value", 0);
                             }
+                            else if (prop["name"] == "EnemyType") {
+                                if (prop.contains("value") && prop["value"].is_string()) {
+                                    spawn.enemyType = prop["value"].get<std::string>();
+                                }
+                            }
+                            else if (prop["name"] == "Quantity") {
+                                spawn.quantity = prop.value("value", 1);
+                            }
                         }
+                    }
+                    
+                    // Fallback se o usuário não botou EnemyType mas a classe é Tank
+                    if (spawn.enemyType.empty() && spawn.type == "Tank") {
+                        spawn.enemyType = "TANK";
                     }
                     
                     if (obj.contains("polyline")) {

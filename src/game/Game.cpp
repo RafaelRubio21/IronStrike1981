@@ -108,26 +108,77 @@ void Game::Update(float deltaTime)
     std::vector<EnemySpawnData> newSpawns = mapManager.PopReadySpawns();
     for (const auto& spawn : newSpawns)
     {
-        if (spawn.type == "Tank" || spawn.type == "TankRoute")
+        if (spawn.type == "Tank" || spawn.type == "EnemyRoute" || spawn.type == "EnemyPatrol")
         {
-            auto t = std::make_unique<Tank>();
-            
-            // spawn.x e spawn.y estão em coordenadas mundiais (World Y).
-            // Precisamos converter para coordenadas de Tela (Screen Y)!
-            float screenY = spawn.y - mapManager.GetScrollY();
-            float screenX = spawn.x;
-            
-            // A Rota está em World Coordinates. Precisamos converter TUDO para Screen Coordinates!
-            std::vector<Vector2> screenPath;
-            for (const auto& wp : spawn.path) {
-                screenPath.push_back({ wp.x, wp.y - mapManager.GetScrollY() });
+            int spawnCount = (spawn.type == "EnemyPatrol") ? spawn.quantity : 1;
+            if (spawnCount <= 0) spawnCount = 1;
+
+            for (int i = 0; i < spawnCount; i++) 
+            {
+                float screenX = spawn.x;
+                float screenY = spawn.y - mapManager.GetScrollY();
+                Rectangle patrolArea = {0,0,0,0};
+
+                if (spawn.type == "EnemyPatrol") {
+                    // Sorteia posição dentro do retângulo
+                    screenX = spawn.x + (float)GetRandomValue(0, (int)spawn.width);
+                    screenY = (spawn.y + (float)GetRandomValue(0, (int)spawn.height)) - mapManager.GetScrollY();
+                    
+                    patrolArea = {
+                        spawn.x, 
+                        spawn.y - mapManager.GetScrollY(),
+                        spawn.width,
+                        spawn.height
+                    };
+                }
+                
+                std::vector<Vector2> screenPath;
+                for (const auto& wp : spawn.path) {
+                    screenPath.push_back({ wp.x, wp.y - mapManager.GetScrollY() });
+                }
+
+                // Fábrica de Inimigos
+                if (spawn.enemyType == "TANK" || spawn.enemyType == "Tank" || spawn.enemyType.empty())
+                {
+                    auto t = std::make_unique<Tank>();
+                    t->Initialize({ screenX, screenY }, spawn.direction, 0, screenPath, patrolArea); 
+                    enemies.push_back(std::move(t));
+                }
+                else 
+                {
+                    auto t = std::make_unique<Tank>(); // Fallback
+                    t->Initialize({ screenX, screenY }, spawn.direction, 0, screenPath, patrolArea); 
+                    enemies.push_back(std::move(t));
+                }
             }
-            
-            t->Initialize({ screenX, screenY }, spawn.direction, 0, screenPath); 
-            enemies.push_back(std::move(t));
         }
     }
     
+    // Sistema Anti-Trombada (Separation Behavior)
+    for (size_t i = 0; i < enemies.size(); i++) {
+        for (size_t j = i + 1; j < enemies.size(); j++) {
+            if (enemies[i]->isDestroyed || enemies[j]->isDestroyed) continue;
+            
+            Rectangle r1 = enemies[i]->GetHitbox();
+            Rectangle r2 = enemies[j]->GetHitbox();
+            if (CheckCollisionRecs(r1, r2)) {
+                Vector2 c1 = { r1.x + r1.width/2.0f, r1.y + r1.height/2.0f };
+                Vector2 c2 = { r2.x + r2.width/2.0f, r2.y + r2.height/2.0f };
+                float dx = c1.x - c2.x;
+                float dy = c1.y - c2.y;
+                float dist = sqrt(dx*dx + dy*dy);
+                if (dist == 0.0f) { dx = 1.0f; dist = 1.0f; }
+                
+                // Força de repulsão suave (Bumper car)
+                float pushForce = 30.0f * deltaTime;
+                enemies[i]->position.x += (dx/dist) * pushForce;
+                enemies[i]->position.y += (dy/dist) * pushForce;
+                enemies[j]->position.x -= (dx/dist) * pushForce;
+                enemies[j]->position.y -= (dy/dist) * pushForce;
+            }
+        }
+    }
+
     // Atualiza os tanques, checa colisão com tiro, e remove os inativos
     for (int i = 0; i < enemies.size(); i++)
     {
@@ -305,6 +356,8 @@ void Game::Render()
 
 
 }
+
+
 
 
 

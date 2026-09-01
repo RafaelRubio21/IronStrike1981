@@ -8,9 +8,13 @@
 
 struct EnemySpawnData {
     std::string type;
+    std::string enemyType;
     int direction;
     float x;
     float y;
+    float width;
+    float height;
+    int quantity;
     std::vector<Vector2> path;
 };
 
@@ -70,6 +74,8 @@ private:
     std::vector<Tileset> tilesets;
     std::vector<TileLayer> layers;
 };
+
+
 
 
 

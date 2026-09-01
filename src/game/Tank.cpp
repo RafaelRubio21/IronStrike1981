@@ -29,7 +29,7 @@ static Sound tankMovingSnd = {0};
 static Sound tankShootingSnd = {0};
 static bool tankAudioLoaded = false;
 
-void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::vector<Vector2> path)
+void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::vector<Vector2> path, Rectangle patrolArea)
 {
     type = tankType;
     position = startPos;
@@ -92,10 +92,20 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::v
     
     waypoints = path;
     currentWaypoint = 0;
+    pathDirection = 1;
+    
+    patrolBounds = patrolArea;
+    isPatrolling = (patrolBounds.width > 0 && patrolBounds.height > 0);
     
     // Se tivermos waypoints, pulamos o primeiro (pois é onde nascemos)
     if (waypoints.size() > 1) {
         currentWaypoint = 1;
+    } else if (isPatrolling) {
+        // Se estamos em modo patrulha e não temos rota fixa, sorteia o primeiro ponto!
+        float targetX = patrolBounds.x + GetRandomValue(0, (int)patrolBounds.width);
+        float targetY = patrolBounds.y + GetRandomValue(0, (int)patrolBounds.height);
+        waypoints.push_back({ targetX, targetY });
+        currentWaypoint = 0;
     }
     
     cannonRotation = rotation;
@@ -230,13 +240,18 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, floa
         if (currentSpeedMult > 1.0f) currentSpeedMult = 1.0f;
     }
     
+    // Rola a cerca de patrulha
+    if (isPatrolling) {
+        patrolBounds.y += scrollSpeed * deltaTime;
+    }
+
     // Rola os waypoints para baixo na tela, para que eles fiquem grudados no chão do mapa!
     for (int i = 0; i < waypoints.size(); i++) {
         waypoints[i].y += scrollSpeed * deltaTime;
     }
 
     // NAVEGAÇÃO POR WAYPOINTS
-    if (!waypoints.empty() && currentWaypoint < waypoints.size()) {
+    if (!isDestroyed && !waypoints.empty() && currentWaypoint < waypoints.size()) {
         Vector2 target = waypoints[currentWaypoint];
         
         // Direção até o waypoint
@@ -245,8 +260,27 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, floa
         float dist = sqrt(dx*dx + dy*dy);
         
         if (dist < 5.0f) {
-            // Chegamos no waypoint! Pula pro próximo
-            currentWaypoint++;
+            // Chegamos no waypoint!
+            if (isPatrolling) {
+                // Sorteia um novo ponto dentro da cerca invisível
+                float targetX = patrolBounds.x + GetRandomValue(0, (int)patrolBounds.width);
+                float targetY = patrolBounds.y + GetRandomValue(0, (int)patrolBounds.height);
+                waypoints.clear();
+                waypoints.push_back({ targetX, targetY });
+                currentWaypoint = 0;
+            } else {
+                // Efeito Ping-Pong (Bate e Volta) na Rota
+                currentWaypoint += pathDirection;
+                if (currentWaypoint >= waypoints.size()) {
+                    pathDirection = -1;
+                    currentWaypoint = waypoints.size() - 2;
+                    if (currentWaypoint < 0) currentWaypoint = 0; // Prevenção de bug se a rota tiver só 1 ponto
+                } else if (currentWaypoint < 0) {
+                    pathDirection = 1;
+                    currentWaypoint = 1;
+                    if (currentWaypoint >= waypoints.size()) currentWaypoint = waypoints.size() - 1;
+                }
+            }
         } else {
             // Ajusta a velocidade para ir direto pro waypoint na velocidade máxima (60.0f)
             float speed = 60.0f;
@@ -254,8 +288,8 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, floa
             velocity.y = (dy / dist) * speed;
             
             // Gira o chassi do tanque pra apontar pro waypoint
-            // atan2 retorna em radianos, converte pra graus. +90 pq o tanque base aponta pra cima
-            float targetRot = atan2(dy, dx) * 180.0f / PI + 90.0f;
+            // atan2 retorna em radianos. Como o sprite nativo aponta pra BAIXO (0 graus), subtraímos 90 graus (-90)
+            float targetRot = atan2(dy, dx) * 180.0f / PI - 90.0f;
             rotation = targetRot; 
         }
     }
