@@ -2,11 +2,12 @@
 #include "raylib.h"
 #include <vector>
 
-// Define os tipos de explosão que você pode ter
+// Define os tipos de explosão de forma genérica
 enum class ExplosionType {
-    TANK_EXPLOSION,
-    HIT_EXPLOSION,
-    PLAYER_EXPLOSION
+    TYPE_0 = 0,
+    TYPE_1 = 1,
+    TYPE_2 = 2,
+    TYPE_3 = 3
 };
 
 // Guarda os dados de uma única explosão ocorrendo na tela
@@ -30,10 +31,9 @@ public:
 private:
     std::vector<ExplosionInstance> explosions;
     
-    // Armazenamento das texturas em memória (carregadas apenas 1 vez)
-    Texture2D tankExpFrames[10] = {0};
-    Texture2D hitExpFrames[10] = {0}; // Pode ser a mesma por enquanto, mas preparado pra outra
-    Texture2D playerExpFrames[10] = {0}; // Texturas do Explosion3
+    // Matriz de texturas: [ID da Explosão][Frame]
+    // Preparado para até 4 tipos de explosões diferentes com 10 frames cada
+    Texture2D expFrames[4][10] = {0};
     
     bool isLoaded = false;
 };

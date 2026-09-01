@@ -114,7 +114,7 @@ void Game::Update(float deltaTime)
     {
         player.justHitGround = false;
         // Explosão 3 é a do player, um pouco maior
-        explosionManager.Spawn(player.GetPosition(), ExplosionType::PLAYER_EXPLOSION, 1.5f);
+        explosionManager.Spawn(player.GetPosition(), ExplosionType::TYPE_1, 1.5f);
         
         // Se tivermos um som de explosão de player, tocaríamos aqui
     }
@@ -181,7 +181,7 @@ void Game::Update(float deltaTime)
                 // Se esse tiro acabou de destruir o tanque
                 if (tanks[i].hp <= 0 && tanks[i].isDestroyed)
                 {
-                    explosionManager.Spawn(tanks[i].position, ExplosionType::TANK_EXPLOSION, 1.0f);
+                    explosionManager.Spawn(tanks[i].position, ExplosionType::TYPE_0, 1.0f);
                 }
                 else
                 {
@@ -233,7 +233,7 @@ void Game::Update(float deltaTime)
                 b.active = false;
                 
                 // Explode na carcaça do player
-                explosionManager.Spawn(b.position, ExplosionType::HIT_EXPLOSION, 0.5f);
+                explosionManager.Spawn(b.position, ExplosionType::TYPE_0, 0.5f);
             }
         }
         else
@@ -334,3 +334,4 @@ void Game::Render()
 
 
 }
+

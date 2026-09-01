@@ -6,28 +6,23 @@ void ExplosionManager::Initialize()
     
     if (!isLoaded)
     {
-        const char* expPaths[] = {
-            "assets/sprites/explosions/explosion2/",
-            "../../assets/sprites/explosions/explosion2/",
-            "../../../assets/sprites/explosions/explosion2/"
+        const char* rootPaths[] = {
+            "assets/sprites/explosions/",
+            "../../assets/sprites/explosions/",
+            "../../../assets/sprites/explosions/"
         };
         
-        for (int p = 0; p < 3; p++)
+        // Vamos carregar a Explosion0 e Explosion1 (2 tipos)
+        for (int t = 0; t < 2; t++)
         {
-            if (tankExpFrames[0].id == 0)
+            for (int p = 0; p < 3; p++)
             {
-                for (int f = 0; f < 10; f++)
+                if (expFrames[t][0].id == 0)
                 {
-                    tankExpFrames[f] = LoadTexture(TextFormat("%sExplosion2_%d.png", expPaths[p], f + 1));
-                    hitExpFrames[f] = tankExpFrames[f]; // Reusa Explosion2
-
-                    // Carrega Explosion3 para o player (assumindo a pasta Explosion3 nas mesmas raizes)
-                    const char* exp3Paths[] = {
-                        "assets/sprites/explosions/Explosion3/",
-                        "../../assets/sprites/explosions/Explosion3/",
-                        "../../../assets/sprites/explosions/Explosion3/"
-                    };
-                    playerExpFrames[f] = LoadTexture(TextFormat("%sExplosion3_%d.png", exp3Paths[p], f + 1));
+                    for (int f = 0; f < 10; f++)
+                    {
+                        expFrames[t][f] = LoadTexture(TextFormat("%sExplosion%d/f%d.png", rootPaths[p], t, f + 1));
+                    }
                 }
             }
         }
@@ -70,10 +65,7 @@ void ExplosionManager::Render() const
 {
     for (const auto& ex : explosions)
     {
-        Texture2D tex;
-        if (ex.type == ExplosionType::PLAYER_EXPLOSION) tex = playerExpFrames[ex.currentFrame];
-        else if (ex.type == ExplosionType::TANK_EXPLOSION) tex = tankExpFrames[ex.currentFrame];
-        else tex = hitExpFrames[ex.currentFrame];
+        Texture2D tex = expFrames[(int)ex.type][ex.currentFrame];
         
         if (tex.id != 0)
         {
@@ -93,4 +85,5 @@ void ExplosionManager::Clear()
 {
     explosions.clear();
 }
+
 
