@@ -1,4 +1,6 @@
 #include "Player.h"
+#include "Constants.h"
+#include <algorithm>
 
 void Player::Initialize(Vector2 startPos)
 {
@@ -24,20 +26,12 @@ void Player::Initialize(Vector2 startPos)
     
     // Carrega o Corpo
     sprite = LoadTexture("assets/sprites/helicopter/helicopter.png");
-    if (sprite.id == 0) sprite = LoadTexture("../../assets/sprites/helicopter/helicopter.png");
-    if (sprite.id == 0) sprite = LoadTexture("../../../assets/sprites/helicopter/helicopter.png");
     destroyedSprite = LoadTexture("assets/sprites/helicopter/helicopter_brocken.png");
-    if (destroyedSprite.id == 0) destroyedSprite = LoadTexture("../../assets/sprites/helicopter/helicopter_brocken.png");
-    if (destroyedSprite.id == 0) destroyedSprite = LoadTexture("../../../assets/sprites/helicopter/helicopter_brocken.png");
     if (sprite.id != 0) hasSprite = true;
 
     // Carrega a Helice
     rotorSprite = LoadTexture("assets/sprites/helicopter/helice.png");
-    if (rotorSprite.id == 0) rotorSprite = LoadTexture("../../assets/sprites/helicopter/helice.png");
-    if (rotorSprite.id == 0) rotorSprite = LoadTexture("../../../assets/sprites/helicopter/helice.png");
     destroyedRotorSprite = LoadTexture("assets/sprites/helicopter/helice_brocken.png");
-    if (destroyedRotorSprite.id == 0) destroyedRotorSprite = LoadTexture("../../assets/sprites/helicopter/helice_brocken.png");
-    if (destroyedRotorSprite.id == 0) destroyedRotorSprite = LoadTexture("../../../assets/sprites/helicopter/helice_brocken.png");
     if (rotorSprite.id != 0) hasRotor = true;
 
     // Carrega o Fogo da Metralhadora
@@ -52,20 +46,14 @@ void Player::Initialize(Vector2 startPos)
     mgFireRate = 0.08f;    // O intervalo entre um tiro e outro (quanto menor, mais rapido atira)
 
     machineGunSprite = LoadTexture("assets/sprites/helicopter/machine_gun.png");
-    if (machineGunSprite.id == 0) machineGunSprite = LoadTexture("../../assets/sprites/helicopter/machine_gun.png");
-    if (machineGunSprite.id == 0) machineGunSprite = LoadTexture("../../../assets/sprites/helicopter/machine_gun.png");
     if (machineGunSprite.id != 0) hasMachineGun = true;
 
     // Carrega os Sons
     engineLoopActive = false;
     
     engineStartingSound = LoadSound("assets/audio/helicopter/engine_starting.ogg");
-    if (engineStartingSound.frameCount == 0) engineStartingSound = LoadSound("../../assets/audio/helicopter/engine_starting.ogg");
-    if (engineStartingSound.frameCount == 0) engineStartingSound = LoadSound("../../../assets/audio/helicopter/engine_starting.ogg");
 
     engineLoopMusic = LoadMusicStream("assets/audio/helicopter/engine.ogg");
-    if (engineLoopMusic.frameCount == 0) engineLoopMusic = LoadMusicStream("../../assets/audio/helicopter/engine.ogg");
-    if (engineLoopMusic.frameCount == 0) engineLoopMusic = LoadMusicStream("../../../assets/audio/helicopter/engine.ogg");
     engineLoopMusic.looping = true; // Define que esse vai tocar pra sempre
 
     // -------------------------------------------------------------
@@ -78,12 +66,7 @@ void Player::Initialize(Vector2 startPos)
     wasShooting = false;
     
     mgShootSound = LoadSound("assets/audio/helicopter/machine_gun.ogg");
-    if (mgShootSound.frameCount == 0) mgShootSound = LoadSound("../../assets/audio/helicopter/machine_gun.ogg");
-    if (mgShootSound.frameCount == 0) mgShootSound = LoadSound("../../../assets/audio/helicopter/machine_gun.ogg");
-
     mgFinalShotSound = LoadSound("assets/audio/helicopter/machine_gun_final_shot.ogg");
-    if (mgFinalShotSound.frameCount == 0) mgFinalShotSound = LoadSound("../../assets/audio/helicopter/machine_gun_final_shot.ogg");
-    if (mgFinalShotSound.frameCount == 0) mgFinalShotSound = LoadSound("../../../assets/audio/helicopter/machine_gun_final_shot.ogg");
 
     if (mgShootSound.frameCount != 0) SetSoundVolume(mgShootSound, 0.5f);
     if (mgFinalShotSound.frameCount != 0) SetSoundVolume(mgFinalShotSound, 0.5f);
@@ -95,16 +78,15 @@ void Player::Initialize(Vector2 startPos)
 void Player::Update(float deltaTime)
 {
     // Atualiza a posicao de todos os tiros criados
-    for (int i = 0; i < bullets.size(); i++)
+    for (auto& b : bullets)
     {
-        bullets[i].y -= bulletSpeed * deltaTime; // Tiro sobe a tela
-        
-        if (bullets[i].y < -50) // Se saiu da tela por cima, apaga da memoria
-        {
-            bullets.erase(bullets.begin() + i);
-            i--; 
-        }
+        b.y -= bulletSpeed * deltaTime; // Tiro sobe a tela
     }
+
+    // Apaga da memoria os tiros que sairam da tela por cima
+    bullets.erase(std::remove_if(bullets.begin(), bullets.end(),
+        [](const Vector2& b) { return b.y < -50.0f; }), bullets.end());
+
     if (hitTimer > 0.0f) hitTimer -= deltaTime;
     if (isDestroyed) {
         isShooting = false; // Força parar de atirar ao morrer
@@ -204,10 +186,11 @@ void Player::Update(float deltaTime)
     position.y += velocity.y * deltaTime;
 
     // Prende na tela
-    if (position.x < 20) position.x = 20;
-    if (position.x > 1024 - 20) position.x = 1024 - 20;
-    if (position.y < 20) position.y = 20;
-    if (position.y > 768 - 20) position.y = 768 - 20;
+    const float margin = 20.0f;
+    if (position.x < margin) position.x = margin;
+    if (position.x > Config::SCREEN_WIDTH - margin) position.x = Config::SCREEN_WIDTH - margin;
+    if (position.y < margin) position.y = margin;
+    if (position.y > Config::SCREEN_HEIGHT - margin) position.y = Config::SCREEN_HEIGHT - margin;
 
     // LOGICA DA METRALHADORA (So atira se o motor ja ligou)
     if (scale >= 1.0f) 
@@ -256,14 +239,14 @@ void Player::Update(float deltaTime)
 
 bool Player::CheckBulletHits(Rectangle targetRect)
 {
-    for (int i = 0; i < bullets.size(); i++)
+    for (auto it = bullets.begin(); it != bullets.end(); ++it)
     {
         // A bala é um projetil fino e alto. Criamos uma hitbox para ela
-        Rectangle bulletRect = { bullets[i].x - 2.0f, bullets[i].y - 15.0f, 4.0f, 15.0f };
-        
+        Rectangle bulletRect = { it->x - 2.0f, it->y - 15.0f, 4.0f, 15.0f };
+
         if (CheckCollisionRecs(bulletRect, targetRect))
         {
-            bullets.erase(bullets.begin() + i); // Apaga a bala da array (ela explode no tanque)
+            bullets.erase(it); // Apaga a bala da array (ela explode no tanque)
             return true; // Acertou!
         }
     }
@@ -319,7 +302,7 @@ void Player::DrawBody() const
     }
     else
     {
-        DrawRectangle(position.x - 15, position.y - 15, 30, 30, isDestroyed ? GRAY : tintColor);
+        DrawRectangle((int)(position.x - 15.0f), (int)(position.y - 15.0f), 30, 30, isDestroyed ? GRAY : tintColor);
     }
 
     // -------------------------------------------------------------
@@ -351,7 +334,7 @@ void Player::DrawBody() const
     }
     else
     {
-        DrawCircle(position.x, position.y - 15.0f, 10, DARKGRAY); 
+        DrawCircle((int)position.x, (int)(position.y - 15.0f), 10, DARKGRAY); 
     }
 
     // -------------------------------------------------------------

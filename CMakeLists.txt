@@ -33,6 +33,13 @@ add_executable(IronStrike1981
 )
 
 target_include_directories(IronStrike1981 PRIVATE src)
+
+# Avisos do compilador ligados: eles pegam sozinhos comparacoes signed/unsigned,
+# variaveis nao usadas e sombreamento de membros.
+target_compile_options(IronStrike1981 PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:/W4>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra>
+)
 target_link_libraries(IronStrike1981 PRIVATE raylib nlohmann_json::nlohmann_json)
 
 

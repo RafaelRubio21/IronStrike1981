@@ -1,4 +1,5 @@
 #include "MapManager.h"
+#include "../Constants.h"
 #include <fstream>
 #include <iostream>
 
@@ -152,7 +153,7 @@ bool MapManager::Load(const std::string& jsonFilePath)
     }
 
     isLoaded = true;
-    scrollY = (float)(mapHeight * tileHeight) - 768.0f;
+    scrollY = (float)(mapHeight * tileHeight) - (float)Config::SCREEN_HEIGHT;
     return true;
 }
 
@@ -168,8 +169,8 @@ void MapManager::Render() const
 {
     if (!isLoaded) return;
 
-    const float screenWidth = 1024.0f;
-    const float screenHeight = 768.0f;
+    const float screenWidth = (float)Config::SCREEN_WIDTH;
+    const float screenHeight = (float)Config::SCREEN_HEIGHT;
 
     // Margem de segurança para desenhar construções grandes que ultrapassam o tamanho de 1 bloco (64x64)
     int margin = 5; 

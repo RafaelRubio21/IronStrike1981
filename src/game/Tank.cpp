@@ -109,59 +109,38 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::v
     
     if (!tankTexturesLoaded)
     {
-        const char* basePaths[] = {
-            "assets/sprites/enemies/",
-            "../../assets/sprites/enemies/",
-            "../../../assets/sprites/enemies/"
-        };
         const char* typeFolders[] = {
-            "tank/",     // Tipo 0 (Pasta renomeada)
+            "tank/",       // Tipo 0 (Pasta renomeada)
             "tank_heavy/"  // Tipo 1 (Pode ser qualquer pasta que você criar)
         };
-        
-        for (int p = 0; p < 3; p++)
+
+        for (int t = 0; t < 2; t++) // Para cada modelo
         {
-            if (tankFrames[0][0].id == 0)
+            const char* folder = typeFolders[t];
+
+            for (int f = 0; f < 4; f++)
             {
-                for (int t = 0; t < 2; t++) // Para cada modelo
-                {
-                    tankFrames[t][0] = LoadTexture(TextFormat("%s%stank1.png", basePaths[p], typeFolders[t]));
-                    tankFrames[t][1] = LoadTexture(TextFormat("%s%stank2.png", basePaths[p], typeFolders[t]));
-                    tankFrames[t][2] = LoadTexture(TextFormat("%s%stank3.png", basePaths[p], typeFolders[t]));
-                    tankFrames[t][3] = LoadTexture(TextFormat("%s%stank4.png", basePaths[p], typeFolders[t]));
-                    tankDestroyedFrame[t] = LoadTexture(TextFormat("%s%stank_destroyed.png", basePaths[p], typeFolders[t]));
-                    
-                    cannonFrames[t][0] = LoadTexture(TextFormat("%s%sturret1.png", basePaths[p], typeFolders[t]));
-                    cannonFrames[t][1] = LoadTexture(TextFormat("%s%sturret2.png", basePaths[p], typeFolders[t]));
-                    cannonFrames[t][2] = LoadTexture(TextFormat("%s%sturret3.png", basePaths[p], typeFolders[t]));
-                    cannonDestroyedFrame[t] = LoadTexture(TextFormat("%s%sturret_destroyed.png", basePaths[p], typeFolders[t]));
-                    
-                    fireFrames[t][0] = LoadTexture(TextFormat("%s%sfire1.png", basePaths[p], typeFolders[t]));
-                    fireFrames[t][1] = LoadTexture(TextFormat("%s%sfire2.png", basePaths[p], typeFolders[t]));
-                    fireFrames[t][2] = LoadTexture(TextFormat("%s%sfire3.png", basePaths[p], typeFolders[t]));
-                }
+                tankFrames[t][f] = LoadTexture(TextFormat("assets/sprites/enemies/%stank%d.png", folder, f + 1));
             }
+            tankDestroyedFrame[t] = LoadTexture(TextFormat("assets/sprites/enemies/%stank_destroyed.png", folder));
+
+            for (int f = 0; f < 3; f++)
+            {
+                cannonFrames[t][f] = LoadTexture(TextFormat("assets/sprites/enemies/%sturret%d.png", folder, f + 1));
+                fireFrames[t][f] = LoadTexture(TextFormat("assets/sprites/enemies/%sfire%d.png", folder, f + 1));
+            }
+            cannonDestroyedFrame[t] = LoadTexture(TextFormat("assets/sprites/enemies/%sturret_destroyed.png", folder));
         }
         tankTexturesLoaded = true;
     }
     
     if (!tankAudioLoaded)
     {
-        const char* audioPaths[] = {
-            "assets/audio/tank/",
-            "../../assets/audio/tank/",
-            "../../../assets/audio/tank/"
-        };
-        
-        for (int i = 0; i < 3; i++)
-        {
-            if (tankExplodingSnd.frameCount == 0)
-            {
-                tankExplodingSnd = LoadSound(TextFormat("%sexploding.ogg", audioPaths[i]));
-                tankMovingSnd = LoadSound(TextFormat("%smoving.ogg", audioPaths[i]));
-                tankShootingSnd = LoadSound(TextFormat("%sshotting.ogg", audioPaths[i]));
-            }
-        }
+        // Antes os três sons dividiam a checagem do exploding: se um deles
+        // faltasse, nunca era tentado de novo.
+        tankExplodingSnd = LoadSound("assets/audio/tank/exploding.ogg");
+        tankMovingSnd = LoadSound("assets/audio/tank/moving.ogg");
+        tankShootingSnd = LoadSound("assets/audio/tank/shotting.ogg");
         
         // Mantém os sons mais baixos já que os tanques estão lá embaixo no mapa
         if (tankExplodingSnd.frameCount != 0) SetSoundVolume(tankExplodingSnd, TANK_VOL_EXPLOSION);
@@ -498,12 +477,12 @@ void Tank::DrawBody() const
     Texture2D tex = isDestroyed ? tankDestroyedFrame[type] : tankFrames[type][currentFrame];
     if (tex.id != 0)
     {
-        float width = (float)tex.width * scale;
-        float height = (float)tex.height * scale;
-        
+        float bodyWidth = (float)tex.width * scale;
+        float bodyHeight = (float)tex.height * scale;
+
         Rectangle sourceRec = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
-        Rectangle destRec = { position.x, position.y, width, height };
-        Vector2 origin = { width / 2.0f, height / 2.0f };
+        Rectangle destRec = { position.x, position.y, bodyWidth, bodyHeight };
+        Vector2 origin = { bodyWidth / 2.0f, bodyHeight / 2.0f };
         
         Color tintColor = WHITE;
         if (hitTimer > 0.0f && !isDestroyed) {

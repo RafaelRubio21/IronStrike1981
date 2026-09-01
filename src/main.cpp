@@ -1,12 +1,18 @@
 #include "raylib.h"
+#include "game/AssetPath.h"
+#include "game/Constants.h"
 #include "game/Game.h"
 
 int main()
 {
-    const int screenWidth = 1024;
-    const int screenHeight = 768;
+    // Entra no diretório que contém a pasta "assets", para que todo
+    // carregamento use um caminho único, sem cascata de "../../"
+    if (!LocateAssetsRoot())
+    {
+        TraceLog(LOG_WARNING, "Pasta 'assets' nao encontrada: o jogo vai rodar sem sprites nem sons.");
+    }
 
-    InitWindow(screenWidth, screenHeight, "Iron Strike 1981 - 2D Arcade");
+    InitWindow(Config::SCREEN_WIDTH, Config::SCREEN_HEIGHT, "Iron Strike 1981 - 2D Arcade");
     InitAudioDevice(); // Inicia o Motor de Som (Hardware)
     SetTargetFPS(60);
 

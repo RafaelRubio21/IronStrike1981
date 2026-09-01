@@ -1,4 +1,5 @@
 #include "ExplosionManager.h"
+#include <algorithm>
 
 void ExplosionManager::Initialize()
 {
@@ -6,37 +7,19 @@ void ExplosionManager::Initialize()
     
     if (!isLoaded)
     {
-        const char* rootPaths[] = {
-            "assets/sprites/explosions/",
-            "../../assets/sprites/explosions/",
-            "../../../assets/sprites/explosions/"
-        };
-        
         // Vamos carregar a Explosion0 e Explosion1
         for (int t = 0; t < 2; t++)
         {
-            for (int p = 0; p < 3; p++)
+            for (int f = 0; f < 10; f++)
             {
-                if (expFrames[t][0].id == 0)
-                {
-                    for (int f = 0; f < 10; f++)
-                    {
-                        expFrames[t][f] = LoadTexture(TextFormat("%sExplosion%d/f%d.png", rootPaths[p], t, f + 1));
-                    }
-                }
+                expFrames[t][f] = LoadTexture(TextFormat("assets/sprites/explosions/Explosion%d/f%d.png", t, f + 1));
             }
         }
-        
+
         // Carrega o FireElement1 no slot TYPE_2 (que tem 7 frames apenas)
-        for (int p = 0; p < 3; p++)
+        for (int f = 0; f < 7; f++)
         {
-            if (expFrames[2][0].id == 0)
-            {
-                for (int f = 0; f < 7; f++)
-                {
-                    expFrames[2][f] = LoadTexture(TextFormat("%sFireElement1/f%d.png", rootPaths[p], f + 1));
-                }
-            }
+            expFrames[2][f] = LoadTexture(TextFormat("assets/sprites/explosions/FireElement1/f%d.png", f + 1));
         }
         
         isLoaded = true;
@@ -58,21 +41,20 @@ void ExplosionManager::Spawn(Vector2 position, ExplosionType type, float scale)
 
 void ExplosionManager::Update(float deltaTime, float scrollSpeed)
 {
-    for (int i = 0; i < explosions.size(); i++)
+    for (auto& ex : explosions)
     {
-        explosions[i].frameTimer += deltaTime;
-        explosions[i].position.y += scrollSpeed * deltaTime;
-        if (explosions[i].frameTimer >= 0.05f) // 20 FPS
+        ex.frameTimer += deltaTime;
+        ex.position.y += scrollSpeed * deltaTime;
+        if (ex.frameTimer >= 0.05f) // 20 FPS
         {
-            explosions[i].frameTimer = 0.0f;
-            explosions[i].currentFrame++;
-            if (explosions[i].currentFrame >= explosions[i].maxFrames)
-            {
-                explosions.erase(explosions.begin() + i);
-                i--;
-            }
+            ex.frameTimer = 0.0f;
+            ex.currentFrame++;
         }
     }
+
+    // Remove as que terminaram a animação
+    explosions.erase(std::remove_if(explosions.begin(), explosions.end(),
+        [](const ExplosionInstance& ex) { return ex.currentFrame >= ex.maxFrames; }), explosions.end());
 }
 
 void ExplosionManager::Render() const

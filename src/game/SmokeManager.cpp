@@ -4,24 +4,9 @@ void SmokeManager::Initialize()
 {
     if (isLoaded) return;
     
-    // Zera os IDs antes de tentar carregar
-    for (int i = 0; i < 7; i++) smokeFrames[i].id = 0;
-    
-    const char* smokePaths[] = {
-        "assets/sprites/smokes/smoke1/",
-        "../../assets/sprites/smokes/smoke1/",
-        "../../../assets/sprites/smokes/smoke1/"
-    };
-    
-    for (int p = 0; p < 3; p++)
+    for (int f = 0; f < 7; f++)
     {
-        if (smokeFrames[0].id == 0)
-        {
-            for (int f = 0; f < 7; f++)
-            {
-                smokeFrames[f] = LoadTexture(TextFormat("%ssmoke1_%d.png", smokePaths[p], f + 1));
-            }
-        }
+        smokeFrames[f] = LoadTexture(TextFormat("assets/sprites/smokes/smoke1/smoke1_%d.png", f + 1));
     }
     
     isLoaded = true;

@@ -1,5 +1,7 @@
 #include "Game.h"
+#include "Constants.h"
 #include <raylib.h>
+#include <algorithm>
 #include <cmath>
 
 
@@ -12,32 +14,25 @@ void Game::Initialize()
     camera.rotation = 0.0f;
     camera.zoom = 1.0f;
 
-    player.Initialize({ 1024.0f / 2.0f, 600.0f });
+    player.Initialize({ Config::SCREEN_WIDTH / 2.0f, 600.0f });
 
     enemies.clear();
     explosionManager.Clear();
     enemyBullets.clear();
     tankSpawnTimer = 0.0f;
 
-    // Tenta carregar o mapa com fallbacks para funcionar no VSCode/Visual Studio
-    if (!mapManager.Load("assets/maps/level1.json")) {
-        if (!mapManager.Load("../../assets/maps/level1.json")) {
-            mapManager.Load("../../../assets/maps/level1.json");
-        }
-    }
+    mapManager.Load("assets/maps/level1.json");
 
     scrollSpeed = 50.0f; // Pixels por segundo
     
     // Inicia o Canvas Global de Sombras do jogo
-    globalShadowTarget = LoadRenderTexture(1024, 768);
+    globalShadowTarget = LoadRenderTexture(Config::SCREEN_WIDTH, Config::SCREEN_HEIGHT);
 
     // Carrega a Música de Fundo
     bgMusicVolume = 0.0f; // Comeca 100% mudo para o Fade-In
     bgMusicTargetVolume = 0.4f; // Volume alvo onde ela deve estabilizar
 
     bgMusic = LoadMusicStream("assets/audio/bgmusic/music1.ogg");
-    if (bgMusic.frameCount == 0) bgMusic = LoadMusicStream("../../assets/audio/bgmusic/music1.ogg");
-    if (bgMusic.frameCount == 0) bgMusic = LoadMusicStream("../../../assets/audio/bgmusic/music1.ogg");
     
     if (bgMusic.frameCount != 0) 
     {
@@ -47,22 +42,9 @@ void Game::Initialize()
     }
     
     // Carrega os Sons de Impacto Metálico
-    const char* audioPaths[] = {
-        "assets/audio/metal_impact/",
-        "../../assets/audio/metal_impact/",
-        "../../../assets/audio/metal_impact/"
-    };
-    
     for (int i = 0; i < IMPACT_SOUND_COUNT; i++)
     {
-        impactSounds[i].frameCount = 0; // Zera para segurança
-        for (int p = 0; p < 3; p++)
-        {
-            if (impactSounds[i].frameCount == 0)
-            {
-                impactSounds[i] = LoadSound(TextFormat("%simpact%d.ogg", audioPaths[p], i + 1));
-            }
-        }
+        impactSounds[i] = LoadSound(TextFormat("assets/audio/metal_impact/impact%d.ogg", i + 1));
     }
     
     explosionManager.Initialize();
@@ -170,52 +152,52 @@ void Game::Update(float deltaTime)
     }
 
     // Atualiza os tanques, checa colisão com tiro, e remove os inativos
-    for (int i = 0; i < enemies.size(); i++)
+    for (auto& e : enemies)
     {
         // Aplica o movimento da câmera sobre todos os inimigos (Ilusão de movimento)
-        enemies[i]->position.y += scrollSpeed * deltaTime;
-        
-        enemies[i]->Update(deltaTime, player.GetPosition(), player.isDestroyed, scrollSpeed);
-        
+        e->position.y += scrollSpeed * deltaTime;
+
+        e->Update(deltaTime, player.GetPosition(), player.isDestroyed, scrollSpeed);
+
         // Se o tanque atirou neste frame, instanciamos a bala inimiga!
-        if (enemies[i]->hasFired)
+        if (e->hasFired)
         {
-            enemies[i]->hasFired = false;
-            
+            e->hasFired = false;
+
             // O Tank usa rotação 0 = para BAIXO (Y+)
-            float rad = enemies[i]->cannonRotation * DEG2RAD;
+            float rad = e->cannonRotation * DEG2RAD;
             Vector2 forward = { -sinf(rad), cosf(rad) };
-            
+
             // Spawna na ponta do cano
-            float offset = std::abs(enemies[i]->fireOffsetY);
-            Vector2 startPos = { enemies[i]->position.x + (forward.x * offset), enemies[i]->position.y + (forward.y * offset) };
+            float offset = std::abs(e->fireOffsetY);
+            Vector2 startPos = { e->position.x + (forward.x * offset), e->position.y + (forward.y * offset) };
             EnemyBullet bullet;
             bullet.Initialize(startPos, forward, 250.0f);
             enemyBullets.push_back(bullet);
         }
-        
-        if (enemies[i]->isDestroyed)
+
+        if (e->isDestroyed)
         {
-            enemies[i]->hitTimer -= deltaTime;
+            e->hitTimer -= deltaTime;
         }
-        
+
         // Só tenta matar o tanque se ele já não estiver destruído
-        if (!enemies[i]->isDestroyed)
+        if (!e->isDestroyed)
         {
-            if (player.CheckBulletHits(enemies[i]->GetHitbox()))
+            if (player.CheckBulletHits(e->GetHitbox()))
             {
-                enemies[i]->TakeDamage(1); // Arranca 1 de HP por bala
-                
+                e->TakeDamage(1); // Arranca 1 de HP por bala
+
                 // Exibe a faísca (FireElement1) em um ponto aleatório dentro da hitbox
-                Rectangle hit = enemies[i]->GetHitbox();
+                Rectangle hit = e->GetHitbox();
                 float randX = hit.x + (float)GetRandomValue(0, (int)hit.width);
                 float randY = hit.y + (float)GetRandomValue(0, (int)hit.height);
                 explosionManager.Spawn({randX, randY}, ExplosionType::TYPE_2, 0.5f);
-                
+
                 // Se esse tiro acabou de destruir o tanque
-                if (enemies[i]->hp <= 0 && enemies[i]->isDestroyed)
+                if (e->hp <= 0 && e->isDestroyed)
                 {
-                    explosionManager.Spawn(enemies[i]->position, ExplosionType::TYPE_0, 1.0f);
+                    explosionManager.Spawn(e->position, ExplosionType::TYPE_0, 1.0f);
                 }
                 else
                 {
@@ -229,43 +211,41 @@ void Game::Update(float deltaTime)
                 }
             }
         }
-        
-        // Remove da lista se ele saiu da tela
-        if (!enemies[i]->isActive)
-        {
-            enemies.erase(enemies.begin() + i);
-            i--;
-        }
     }
+
+    // Remove os inimigos que sairam da tela
+    enemies.erase(std::remove_if(enemies.begin(), enemies.end(),
+        [](const std::unique_ptr<EnemyBase>& e) { return !e->isActive; }), enemies.end());
     
     // Anima e remove explosões
     explosionManager.Update(deltaTime, scrollSpeed);
     
     // Atualiza Balas Inimigas
-    for (int i = 0; i < (int)enemyBullets.size(); i++)
+    for (auto& b : enemyBullets)
     {
-        auto& b = enemyBullets[i];
-        
         // Movimento e rastro ficam dentro do próprio EnemyBullet
         b.Update(deltaTime);
-        
+
         // Colisão com o Jogador
         if (b.active && !player.isDestroyed && CheckCollisionPointRec(b.position, player.GetHitbox()))
         {
             player.TakeDamage(20); // Bala de tanque arranca 20 de vida
             b.OnHit();
-            
+
             // Explode na carcaça do player
             explosionManager.Spawn(b.position, ExplosionType::TYPE_0, 0.5f);
         }
-        
-        // Destrói se sair muito da tela ou se já dissipou toda a fumaça após bater
-        if (b.position.x < -200 || b.position.x > 1200 || b.position.y < -200 || b.position.y > 1000 || (!b.active && b.trail.empty()))
-        {
-            enemyBullets.erase(enemyBullets.begin() + i);
-            i--;
-        }
     }
+
+    // Descarta as balas que sairam da tela ou que já dissiparam toda a fumaça
+    enemyBullets.erase(std::remove_if(enemyBullets.begin(), enemyBullets.end(),
+        [](const EnemyBullet& b) {
+            const bool foraDaTela = b.position.x < -Config::CULL_MARGIN ||
+                                    b.position.x > Config::SCREEN_WIDTH + Config::CULL_MARGIN ||
+                                    b.position.y < -Config::CULL_MARGIN ||
+                                    b.position.y > Config::SCREEN_HEIGHT + Config::CULL_MARGIN;
+            return foraDaTela || (!b.active && b.trail.empty());
+        }), enemyBullets.end());
 }
 
 void Game::Render()

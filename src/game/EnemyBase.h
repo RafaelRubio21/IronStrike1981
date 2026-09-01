@@ -1,5 +1,6 @@
 #pragma once
 #include "raylib.h"
+#include "Constants.h"
 #include <cmath>
 
 class EnemyBase
@@ -77,7 +78,8 @@ public:
         position.y += velocity.y * deltaTime;
         
         // Culling: desativa o inimigo se ele sair completamente da tela
-        if (position.x < -200 || position.x > 1300 || position.y < -200 || position.y > 1000)
+        if (position.x < -Config::CULL_MARGIN || position.x > Config::SCREEN_WIDTH + Config::CULL_MARGIN ||
+            position.y < -Config::CULL_MARGIN || position.y > Config::SCREEN_HEIGHT + Config::CULL_MARGIN)
         {
             isActive = false;
         }
