@@ -1,0 +1,83 @@
+{
+    "activeFile": "",
+    "expandedProjectPaths": [
+    ],
+    "fileStates": {
+        "": {
+            "scaleInDock": 1
+        },
+        "#Grass": {
+            "dynamicWrapping": false
+        },
+        "Asphalt/asphalt.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "Grass/grass.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "Grass/tileset.tmx": {
+            "scale": 0.66203125,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 320.2265754071277,
+                "y": 640.4531508142554
+            }
+        },
+        "Grass/tileset.tmx#Grass": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "Water/water.tsj": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "level1.json#agua": {
+            "scaleInEditor": 1
+        },
+        "level1.json#asphalt": {
+            "dynamicWrapping": true,
+            "scaleInEditor": 1
+        },
+        "level1.json#grass": {
+            "dynamicWrapping": false
+        },
+        "level1.json#water": {
+            "dynamicWrapping": true
+        },
+        "level1.tmj": {
+            "scale": 0.66203125,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 320.2265754071277,
+                "y": 640.4531508142554
+            }
+        },
+        "level1.tmj#Grass": {
+            "scaleInDock": 1
+        }
+    },
+    "last.externalTilesetPath": "D:/Projetos/IronStrike1981/assets/maps/Water",
+    "last.imagePath": "D:/Projetos/IronStrike1981/assets/maps/Water",
+    "map.lastUsedFormat": "json",
+    "map.tileHeight": 64,
+    "map.tileWidth": 64,
+    "map.width": 10,
+    "openFiles": [
+    ],
+    "project": "IronStrike1981.tiled-project",
+    "recentFiles": [
+        "Asphalt/asphalt.tsx",
+        "Water/water.tsj",
+        "Grass/grass.tsx",
+        "level1.tmj",
+        "Grass/tileset.tmx"
+    ],
+    "tileset.embedInMap": true,
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.type": 1
+}

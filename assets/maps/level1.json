@@ -1,0 +1,631 @@
+{ "compressionlevel":-1,
+ "height":20,
+ "infinite":false,
+ "layers":[
+        {
+         "data":[21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21],
+         "height":20,
+         "id":1,
+         "name":"grass",
+         "opacity":1,
+         "type":"tilelayer",
+         "visible":true,
+         "width":16,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "data":[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51,
+            0, 0, 0, 0, 0, 0, 0, 0, 51, 0, 0, 0, 51, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 51, 0, 0, 0, 51, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 51, 0, 0, 0, 51, 0, 0, 0,
+            0, 0, 0, 0, 51, 51, 51, 51, 51, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 51, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 51, 51, 51, 51, 51, 51, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 51, 0, 0, 0, 0, 0, 0, 0],
+         "height":20,
+         "id":2,
+         "name":"asphalt",
+         "opacity":1,
+         "type":"tilelayer",
+         "visible":true,
+         "width":16,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "data":[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 88, 0, 90, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 88, 0, 90, 0, 0, 0, 0, 0, 0,
+            93, 93, 93, 93, 93, 93, 93, 94, 0, 90, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 90, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 91, 92, 92, 92, 92, 92, 92,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         "height":20,
+         "id":3,
+         "name":"water",
+         "opacity":1,
+         "type":"tilelayer",
+         "visible":true,
+         "width":16,
+         "x":0,
+         "y":0
+        }],
+ "nextlayerid":4,
+ "nextobjectid":1,
+ "orientation":"orthogonal",
+ "renderorder":"right-down",
+ "tiledversion":"1.12.2",
+ "tileheight":64,
+ "tilesets":[
+        {
+         "columns":0,
+         "firstgid":1,
+         "grid":
+            {
+             "height":1,
+             "orientation":"orthogonal",
+             "width":1
+            },
+         "margin":0,
+         "name":"grass",
+         "spacing":0,
+         "tilecount":25,
+         "tileheight":64,
+         "tiles":[
+                {
+                 "id":0,
+                 "image":"Grass\/grass11.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":1,
+                 "image":"Grass\/grass12.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":2,
+                 "image":"Grass\/grass13.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":3,
+                 "image":"Grass\/grass14.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":4,
+                 "image":"Grass\/grass15.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":5,
+                 "image":"Grass\/grass16.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":6,
+                 "image":"Grass\/grass17.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":7,
+                 "image":"Grass\/grass18.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":8,
+                 "image":"Grass\/grass19.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":9,
+                 "image":"Grass\/grass20.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":10,
+                 "image":"Grass\/grass21.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":11,
+                 "image":"Grass\/grass22.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":12,
+                 "image":"Grass\/grass23.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":13,
+                 "image":"Grass\/grass24.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":14,
+                 "image":"Grass\/grass25.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":15,
+                 "image":"Grass\/grass1.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                },
+            
+                {
+                 "id":16,
+                 "image":"Grass\/grass2.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":17,
+                 "image":"Grass\/grass3.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":18,
+                 "image":"Grass\/grass4.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":19,
+                 "image":"Grass\/grass5.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":20,
+                 "image":"Grass\/grass6.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":21,
+                 "image":"Grass\/grass7.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":22,
+                 "image":"Grass\/grass8.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":23,
+                 "image":"Grass\/grass9.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":24,
+                 "image":"Grass\/grass10.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }],
+         "tilewidth":64
+        }, 
+        {
+         "columns":0,
+         "firstgid":26,
+         "grid":
+            {
+             "height":1,
+             "orientation":"orthogonal",
+             "width":1
+            },
+         "margin":0,
+         "name":"asphalt",
+         "spacing":0,
+         "tilecount":25,
+         "tileheight":64,
+         "tiles":[
+                {
+                 "id":25,
+                 "image":"Asphalt\/asphalt7.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":26,
+                 "image":"Asphalt\/asphalt8.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":27,
+                 "image":"Asphalt\/asphalt9.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":28,
+                 "image":"Asphalt\/asphalt10.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":29,
+                 "image":"Asphalt\/asphalt11.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":30,
+                 "image":"Asphalt\/asphalt12.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":31,
+                 "image":"Asphalt\/asphalt13.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":32,
+                 "image":"Asphalt\/asphalt14.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":33,
+                 "image":"Asphalt\/asphalt15.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":34,
+                 "image":"Asphalt\/asphalt16.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":35,
+                 "image":"Asphalt\/asphalt17.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":36,
+                 "image":"Asphalt\/asphalt18.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":37,
+                 "image":"Asphalt\/asphalt19.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":38,
+                 "image":"Asphalt\/asphalt20.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":39,
+                 "image":"Asphalt\/asphalt21.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":40,
+                 "image":"Asphalt\/asphalt22.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                },
+            
+                {
+                 "id":41,
+                 "image":"Asphalt\/asphalt23.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":42,
+                 "image":"Asphalt\/asphalt24.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":43,
+                 "image":"Asphalt\/asphalt25.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":44,
+                 "image":"Asphalt\/asphalt1.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":45,
+                 "image":"Asphalt\/asphalt2.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":46,
+                 "image":"Asphalt\/asphalt3.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":47,
+                 "image":"Asphalt\/asphalt4.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":48,
+                 "image":"Asphalt\/asphalt5.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":49,
+                 "image":"Asphalt\/asphalt6.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }],
+         "tilewidth":64
+        }, 
+        {
+         "columns":0,
+         "firstgid":76,
+         "grid":
+            {
+             "height":1,
+             "orientation":"orthogonal",
+             "width":1
+            },
+         "margin":0,
+         "name":"water",
+         "spacing":0,
+         "tilecount":28,
+         "tileheight":64,
+         "tiles":[
+                {
+                 "id":0,
+                 "image":"Water\/water10.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":1,
+                 "image":"Water\/water11.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":2,
+                 "image":"Water\/water12.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":3,
+                 "image":"Water\/water13.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":4,
+                 "image":"Water\/water14.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":5,
+                 "image":"Water\/water15.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":6,
+                 "image":"Water\/water16.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":7,
+                 "image":"Water\/water17.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":8,
+                 "image":"Water\/water18.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":9,
+                 "image":"Water\/water19.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":10,
+                 "image":"Water\/water20.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":11,
+                 "image":"Water\/water21.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":12,
+                 "image":"Water\/water22.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":13,
+                 "image":"Water\/water23.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":14,
+                 "image":"Water\/water24.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":15,
+                 "image":"Water\/water25.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                },
+            
+                {
+                 "id":16,
+                 "image":"Water\/water26.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":17,
+                 "image":"Water\/water27.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":18,
+                 "image":"Water\/water28.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":19,
+                 "image":"Water\/water1.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":20,
+                 "image":"Water\/water2.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":21,
+                 "image":"Water\/water3.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":22,
+                 "image":"Water\/water4.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":23,
+                 "image":"Water\/water5.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":24,
+                 "image":"Water\/water6.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":25,
+                 "image":"Water\/water7.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":26,
+                 "image":"Water\/water8.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }, 
+                {
+                 "id":27,
+                 "image":"Water\/water9.png",
+                 "imageheight":64,
+                 "imagewidth":64
+                }],
+         "tilewidth":64
+        }],
+ "tilewidth":64,
+ "type":"map",
+ "version":"1.10",
+ "width":16
+}

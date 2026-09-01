@@ -46,7 +46,7 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType)
     {
         speed = 60.0f;
         turretSpeed = 20.0f;
-        hp = 5;
+        hp = 50;
         cannonOffsetY = -25.0f;
         fireOffsetY = -110.0f; // Ajuste livremente esse valor! (Negativo = mais pra ponta do cano)
         scale = 1.0f; 
@@ -180,6 +180,30 @@ void Tank::Destroy()
     }
 }
 
+
+
+Rectangle Tank::GetHitbox() const
+{
+    // A imagem original é 67x94.
+    // Vamos usar 45x70 para a hitbox ficar um pouco menor e mais focada no centro da lataria.
+    float hitWidth = 45.0f * scale;
+    float hitHeight = 70.0f * scale;
+
+    // MAGIA AQUI: Se a imagem rotacionar 90 graus, a largura e altura da hitbox invertem!
+    if (rotation <= -hitWidth || rotation >= hitWidth)
+    {
+        float temp = hitWidth;
+        hitWidth = hitHeight;
+        hitHeight = temp;
+    }
+    
+    return { 
+        position.x - (hitWidth / 2.0f), 
+        position.y - (hitHeight / 2.0f), 
+        hitWidth, 
+        hitHeight 
+    };
+}
 
 void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed)
 {
@@ -441,6 +465,7 @@ void Tank::DrawBody() const
         }
     }
 }
+
 
 
 

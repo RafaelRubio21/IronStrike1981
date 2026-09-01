@@ -19,6 +19,13 @@ void Game::Initialize()
     enemyBullets.clear();
     tankSpawnTimer = 0.0f;
 
+    // Tenta carregar o mapa com fallbacks para funcionar no VSCode/Visual Studio
+    if (!mapManager.Load("assets/maps/level1.json")) {
+        if (!mapManager.Load("../../assets/maps/level1.json")) {
+            mapManager.Load("../../../assets/maps/level1.json");
+        }
+    }
+
     levelScrollY = 0.0f;
     scrollSpeed = 100.0f; // Pixels por segundo
     
@@ -101,15 +108,45 @@ void Game::Update(float deltaTime)
     if (tankSpawnTimer >= 2.0f) // Cria um tanque a cada 2 segundos
     {
         tankSpawnTimer = 0.0f;
-        int type = GetRandomValue(0, 2);
+        int dir = GetRandomValue(0, 2);
+        
+        // Pega as dimensões da grade
+        int tWidth = mapManager.GetTileWidth();
+        if (tWidth == 0) tWidth = 64; // Fallback de segurança
+        int tHeight = 64; 
         
         auto t = std::make_unique<Tank>();
-        if (type == 0) // Vem de cima
-            t->Initialize({ (float)GetRandomValue(100, 924), -100.0f }, 0);
-        else if (type == 1) // Vem da esquerda
-            t->Initialize({ -100.0f, (float)GetRandomValue(100, 600) }, 1);
-        else // Vem da direita
-            t->Initialize({ 1124.0f, (float)GetRandomValue(100, 600) }, 2);
+        if (dir == 0) // Vem de cima (Move pra baixo)
+        {
+            // Sorteia uma coluna aleatória do mapa
+            int maxCols = mapManager.GetMapWidth();
+            if (maxCols == 0) maxCols = 1024 / tWidth;
+            
+            // maxCols-1 pra não nascer fora da tela caso o mapa seja maior q a tela
+            if (maxCols > 15) maxCols = 15; 
+            
+            int col = GetRandomValue(1, maxCols - 2); 
+            float spawnX = (col * tWidth) + (tWidth / 2.0f);
+            
+            t->Initialize({ spawnX, -100.0f }, dir, 0); 
+        }
+        else if (dir == 1) // Vem da esquerda (Move pra direita)
+        {
+            // Sorteia uma linha vertical na tela, alinhada à grade de 64
+            int maxRows = 768 / tHeight;
+            int row = GetRandomValue(1, maxRows - 2);
+            float spawnY = (row * tHeight) + (tHeight / 2.0f);
+            
+            t->Initialize({ -100.0f, spawnY }, dir, 0);
+        }
+        else // Vem da direita (Move pra esquerda)
+        {
+            int maxRows = 768 / tHeight;
+            int row = GetRandomValue(1, maxRows - 2);
+            float spawnY = (row * tHeight) + (tHeight / 2.0f);
+            
+            t->Initialize({ 1124.0f, spawnY }, dir, 0);
+        }
             
         enemies.push_back(std::move(t));
     }
@@ -232,6 +269,9 @@ void Game::Render()
     BeginDrawing();
     ClearBackground({ 34, 139, 34, 255 }); // Verde Floresta Escuro temporario
 
+    // Desenha o fundo do mapa (Chão, Água)
+    mapManager.Render();
+
     // ETAPA 2: SHADOW PASS GLOBAL
     BeginTextureMode(globalShadowTarget);
         ClearBackground(BLANK); // Limpa o fundo do buffer com alfa 0
@@ -279,4 +319,5 @@ void Game::Render()
 
 
 }
+
 

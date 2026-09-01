@@ -14,8 +14,20 @@ public:
     
     virtual Rectangle GetHitbox() const 
     {
-        float scaledWidth = width * scale;
-        float scaledHeight = height * scale;
+        // Fator de redução (0.7 = 70% do tamanho da imagem)
+        // Isso evita que tiros acertem os pixels transparentes nas bordas.
+        float hitScale = 0.7f; 
+        
+        float scaledWidth = (width * scale) * hitScale;
+        float scaledHeight = (height * scale) * hitScale;
+        
+        if (std::abs(rotation) > 45.0f)
+        {
+            float temp = scaledWidth;
+            scaledWidth = scaledHeight;
+            scaledHeight = temp;
+        }
+        
         // Assume origin (pivot) is exactly in the center for all enemies
         return { 
             position.x - (scaledWidth / 2.0f), 
@@ -115,6 +127,7 @@ public:
     float width = 50.0f;
     float height = 50.0f;
 };
+
 
 
 

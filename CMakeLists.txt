@@ -15,6 +15,12 @@ set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(raylib)
 
+FetchContent_Declare(
+    nlohmann_json
+    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
 add_executable(IronStrike1981 
     src/main.cpp
     src/game/Game.cpp
@@ -23,9 +29,10 @@ add_executable(IronStrike1981
     src/game/Player.cpp
     src/game/Tank.cpp
     src/game/ExplosionManager.cpp
+    src/game/map/MapManager.cpp
 )
 
 target_include_directories(IronStrike1981 PRIVATE src)
-target_link_libraries(IronStrike1981 PRIVATE raylib)
+target_link_libraries(IronStrike1981 PRIVATE raylib nlohmann_json::nlohmann_json)
 
 

@@ -28,6 +28,7 @@ public:
     void DrawBody() const override;
     
     void Destroy() override;
+    Rectangle GetHitbox() const override;
 
     // Status individuais do tanque (podem variar por tipo)
     float currentSpeedMult;
@@ -49,6 +50,7 @@ private:
     bool isCannonShooting;
     float turretAngularVel; // Velocidade angular atual da torreta (inércia)
 };
+
 
 
 
