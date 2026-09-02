@@ -66,7 +66,8 @@
         },
         "level1.json#buildings": {
             "dynamicWrapping": true,
-            "scaleInDock": 1
+            "scaleInDock": 1,
+            "scaleInEditor": 1
         },
         "level1.json#grass": {
             "dynamicWrapping": false,
@@ -101,7 +102,7 @@
     },
     "last.exportedFilePath": "D:/Projetos/IronStrike1981/assets/maps",
     "last.externalTilesetPath": "D:/Projetos/IronStrike1981/assets/maps/Road",
-    "last.imagePath": "D:/Projetos/IronStrike1981/assets/maps/Road",
+    "last.imagePath": "D:/Projetos/IronStrike1981/assets/maps/Buildings",
     "last.objectTemplatePath": "D:/Projetos/IronStrike1981/assets/maps",
     "last.objectTypesPath": "D:/Projetos/IronStrike1981/assets/maps/propertytypes.json",
     "map.lastUsedExportFilter": "All Files (*)",
@@ -113,7 +114,7 @@
         "level1.json"
     ],
     "project": "IronStrike1981.tiled-project",
-    "property.type": "float",
+    "property.type": "int",
     "recentFiles": [
         "level2.json",
         "level1.json",

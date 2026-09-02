@@ -15,7 +15,6 @@ static float NormalizeAngleDiff(float degrees)
 // =================================================================
 // CONFIGURAÇÕES GERAIS DOS TANQUES (Apenas áudios e partículas)
 // =================================================================
-static float TANK_VOL_EXPLOSION = 0.5f;   // Volume da explosão (0.0 a 1.0)
 static float TANK_VOL_ENGINE = 0.15f;     // Volume do motor (0.0 a 1.0)
 static float TANK_VOL_SHOOTING = 0.4f;    // Volume do tiro inimigo (0.0 a 1.0)
 
@@ -34,7 +33,6 @@ static Texture2D cannonDestroyedFrame[2] = {0};
 static Texture2D fireFrames[2][3] = {0};
 static bool tankTexturesLoaded = false;
 
-static Sound tankExplodingSnd = {0};
 static Sound tankMovingSnd = {0};
 static Sound tankShootingSnd = {0};
 static bool tankAudioLoaded = false;
@@ -174,14 +172,10 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::v
     
     if (!tankAudioLoaded)
     {
-        // Antes os três sons dividiam a checagem do exploding: se um deles
-        // faltasse, nunca era tentado de novo.
-        tankExplodingSnd = LoadSound("assets/audio/tank/exploding.ogg");
         tankMovingSnd = LoadSound("assets/audio/tank/moving.ogg");
         tankShootingSnd = LoadSound("assets/audio/tank/shotting.ogg");
         
         // Mantém os sons mais baixos já que os tanques estão lá embaixo no mapa
-        if (tankExplodingSnd.frameCount != 0) SetSoundVolume(tankExplodingSnd, TANK_VOL_EXPLOSION);
         if (tankMovingSnd.frameCount != 0) SetSoundVolume(tankMovingSnd, TANK_VOL_ENGINE); 
         if (tankShootingSnd.frameCount != 0) SetSoundVolume(tankShootingSnd, TANK_VOL_SHOOTING);
         
@@ -198,9 +192,9 @@ void Tank::Destroy()
         isDestroyed = true;
         isCannonShooting = false; // Corta o fogo do canhão imediatamente
         cannonFrame = 0;
-        
-        // Toca o som de explosão ao ser destruído
-        if (tankExplodingSnd.frameCount != 0) PlaySound(tankExplodingSnd);
+
+        // O estrondo sai junto da explosão (ExplosionType::TYPE_3), que o
+        // Game dispara ao ver o tanque destruído.
     }
 }
 
@@ -229,7 +223,6 @@ void Tank::UnloadSharedAssets()
 
     if (tankAudioLoaded)
     {
-        if (tankExplodingSnd.frameCount != 0) { UnloadSound(tankExplodingSnd); tankExplodingSnd = {}; }
         if (tankMovingSnd.frameCount != 0) { UnloadSound(tankMovingSnd); tankMovingSnd = {}; }
         if (tankShootingSnd.frameCount != 0) { UnloadSound(tankShootingSnd); tankShootingSnd = {}; }
         tankAudioLoaded = false;

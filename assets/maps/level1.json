@@ -434,7 +434,7 @@
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 129, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 138, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
          "height":100,
          "id":11,
@@ -614,173 +614,196 @@
          "name":"Buildings",
          "objects":[
                 {
-                 "gid":113,
-                 "height":123,
-                 "id":72,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":172,
-                 "x":137,
-                 "y":5181
-                }, 
-                {
-                 "gid":117,
+                 "gid":127,
                  "height":129,
-                 "id":73,
+                 "id":88,
                  "name":"",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"FrameDestroyed",
+                         "type":"string",
+                         "value":"broken_house2"
+                        }, 
+                        {
+                         "name":"HP",
+                         "type":"int",
+                         "value":30
+                        }],
                  "rotation":0,
-                 "type":"",
+                 "type":"Building",
                  "visible":true,
                  "width":129,
                  "x":128,
-                 "y":6144
+                 "y":5568
                 }, 
                 {
-                 "gid":117,
+                 "gid":127,
                  "height":129,
-                 "id":74,
+                 "id":95,
                  "name":"",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"FrameDestroyed",
+                         "type":"string",
+                         "value":"broken_house2"
+                        }, 
+                        {
+                         "name":"HP",
+                         "type":"int",
+                         "value":30
+                        }],
                  "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":129,
-                 "x":704,
-                 "y":6272
-                }, 
-                {
-                 "gid":117,
-                 "height":129,
-                 "id":75,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":129,
-                 "x":576,
-                 "y":5760
-                }, 
-                {
-                 "gid":117,
-                 "height":129,
-                 "id":76,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"Tank",
-                 "visible":true,
-                 "width":129,
-                 "x":64,
-                 "y":5504
-                }, 
-                {
-                 "gid":117,
-                 "height":129,
-                 "id":77,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":129,
-                 "x":192,
-                 "y":5504
-                }, 
-                {
-                 "gid":117,
-                 "height":129,
-                 "id":78,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":129,
-                 "x":832,
-                 "y":5248
-                }, 
-                {
-                 "gid":117,
-                 "height":129,
-                 "id":79,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":129,
-                 "x":832,
-                 "y":5376
-                }, 
-                {
-                 "gid":117,
-                 "height":129,
-                 "id":80,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":129,
-                 "x":64,
-                 "y":4928
-                }, 
-                {
-                 "gid":117,
-                 "height":129,
-                 "id":81,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":129,
-                 "x":832,
-                 "y":4800
-                }, 
-                {
-                 "gid":117,
-                 "height":129,
-                 "id":82,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":129,
-                 "x":640,
-                 "y":4608
-                }, 
-                {
-                 "gid":117,
-                 "height":129,
-                 "id":83,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":129,
-                 "x":128,
-                 "y":4416
-                }, 
-                {
-                 "gid":117,
-                 "height":129,
-                 "id":84,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
+                 "type":"Building",
                  "visible":true,
                  "width":129,
                  "x":768,
-                 "y":4160
+                 "y":5824
+                }, 
+                {
+                 "gid":126,
+                 "height":129,
+                 "id":89,
+                 "name":"",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"FrameDestroyed",
+                         "type":"string",
+                         "value":"broken_house2"
+                        }, 
+                        {
+                         "name":"HP",
+                         "type":"int",
+                         "value":30
+                        }],
+                 "rotation":0,
+                 "type":"Building",
+                 "visible":true,
+                 "width":129,
+                 "x":768,
+                 "y":5376
+                }, 
+                {
+                 "gid":128,
+                 "height":129,
+                 "id":90,
+                 "name":"",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"FrameDestroyed",
+                         "type":"string",
+                         "value":"broken_house2"
+                        }, 
+                        {
+                         "name":"HP",
+                         "type":"int",
+                         "value":30
+                        }],
+                 "rotation":0,
+                 "type":"Building",
+                 "visible":true,
+                 "width":129,
+                 "x":128,
+                 "y":5120
+                }, 
+                {
+                 "gid":124,
+                 "height":123,
+                 "id":91,
+                 "name":"",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"FrameDestroyed",
+                         "type":"string",
+                         "value":"broken_house1"
+                        }, 
+                        {
+                         "name":"HP",
+                         "type":"int",
+                         "value":30
+                        }],
+                 "rotation":0,
+                 "type":"Building",
+                 "visible":true,
+                 "width":172,
+                 "x":768,
+                 "y":4864
+                }, 
+                {
+                 "gid":123,
+                 "height":123,
+                 "id":92,
+                 "name":"",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"FrameDestroyed",
+                         "type":"string",
+                         "value":"broken_house1"
+                        }, 
+                        {
+                         "name":"HP",
+                         "type":"int",
+                         "value":30
+                        }],
+                 "rotation":-90,
+                 "type":"Building",
+                 "visible":true,
+                 "width":172,
+                 "x":320,
+                 "y":4480
+                }, 
+                {
+                 "gid":125,
+                 "height":123,
+                 "id":93,
+                 "name":"",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"FrameDestroyed",
+                         "type":"string",
+                         "value":"broken_house1"
+                        }, 
+                        {
+                         "name":"HP",
+                         "type":"int",
+                         "value":30
+                        }],
+                 "rotation":-90,
+                 "type":"Building",
+                 "visible":true,
+                 "width":172,
+                 "x":576,
+                 "y":4480
+                }, 
+                {
+                 "gid":124,
+                 "height":123,
+                 "id":94,
+                 "name":"",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"FrameDestroyed",
+                         "type":"string",
+                         "value":"broken_house1"
+                        }, 
+                        {
+                         "name":"HP",
+                         "type":"int",
+                         "value":50
+                        }],
+                 "rotation":-90,
+                 "type":"Building",
+                 "visible":true,
+                 "width":172,
+                 "x":832,
+                 "y":4480
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -813,7 +836,7 @@
          "y":0
         }],
  "nextlayerid":13,
- "nextobjectid":87,
+ "nextobjectid":96,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",
@@ -1357,56 +1380,56 @@
          "tileheight":133,
          "tiles":[
                 {
-                 "id":9,
-                 "image":"SmallHouses\/small_house1_color1.png",
-                 "imageheight":123,
-                 "imagewidth":172
-                }, 
-                {
-                 "id":10,
-                 "image":"SmallHouses\/small_house1_color2.png",
-                 "imageheight":123,
-                 "imagewidth":172
-                }, 
-                {
-                 "id":11,
-                 "image":"SmallHouses\/small_house1_color3.png",
-                 "imageheight":123,
-                 "imagewidth":172
-                }, 
-                {
-                 "id":12,
-                 "image":"SmallHouses\/small_house2_color1.png",
-                 "imageheight":129,
-                 "imagewidth":129
-                }, 
-                {
-                 "id":13,
-                 "image":"SmallHouses\/small_house2_color2.png",
-                 "imageheight":129,
-                 "imagewidth":129
-                }, 
-                {
-                 "id":14,
-                 "image":"SmallHouses\/small_house2_color3.png",
-                 "imageheight":129,
-                 "imagewidth":129
-                }, 
-                {
-                 "id":15,
-                 "image":"SmallHouses\/small_house3_color1.png",
+                 "id":18,
+                 "image":"Buildings\/house3_color3.png",
                  "imageheight":133,
                  "imagewidth":175
                 }, 
                 {
-                 "id":16,
-                 "image":"SmallHouses\/small_house3_color3.png",
+                 "id":19,
+                 "image":"Buildings\/house1_color1.png",
+                 "imageheight":123,
+                 "imagewidth":172
+                }, 
+                {
+                 "id":20,
+                 "image":"Buildings\/house1_color2.png",
+                 "imageheight":123,
+                 "imagewidth":172
+                }, 
+                {
+                 "id":21,
+                 "image":"Buildings\/house1_color3.png",
+                 "imageheight":123,
+                 "imagewidth":172
+                }, 
+                {
+                 "id":22,
+                 "image":"Buildings\/house2_color1.png",
+                 "imageheight":129,
+                 "imagewidth":129
+                }, 
+                {
+                 "id":23,
+                 "image":"Buildings\/house2_color2.png",
+                 "imageheight":129,
+                 "imagewidth":129
+                }, 
+                {
+                 "id":24,
+                 "image":"Buildings\/house2_color3.png",
+                 "imageheight":129,
+                 "imagewidth":129
+                }, 
+                {
+                 "id":25,
+                 "image":"Buildings\/house3_color1.png",
                  "imageheight":133,
                  "imagewidth":175
                 }, 
                 {
-                 "id":17,
-                 "image":"SmallHouses\/small_house3_color3-1.png",
+                 "id":26,
+                 "image":"Buildings\/house3_color2.png",
                  "imageheight":133,
                  "imagewidth":175
                 }],
@@ -1414,7 +1437,7 @@
         }, 
         {
          "columns":0,
-         "firstgid":122,
+         "firstgid":131,
          "grid":
             {
              "height":1,

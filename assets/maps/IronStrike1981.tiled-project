@@ -11,6 +11,41 @@
     ],
     "propertyTypes": [
         {
+            "color": "#ffa0a0a4",
+            "drawFill": true,
+            "id": 5,
+            "members": [
+                {
+                    "name": "EffectDestroyed",
+                    "type": "string",
+                    "value": ""
+                },
+                {
+                    "name": "FrameDestroyed",
+                    "type": "string",
+                    "value": ""
+                },
+                {
+                    "name": "HP",
+                    "type": "int",
+                    "value": 0
+                }
+            ],
+            "name": "Building",
+            "type": "class",
+            "useAs": [
+                "property",
+                "map",
+                "layer",
+                "object",
+                "tile",
+                "tileset",
+                "wangcolor",
+                "wangset",
+                "project"
+            ]
+        },
+        {
             "id": 3,
             "name": "EEnemyType",
             "storageType": "string",

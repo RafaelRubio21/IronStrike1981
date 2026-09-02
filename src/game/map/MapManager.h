@@ -47,6 +47,13 @@ struct MapObject {
     float y;
     float width;   // 0 = usar o tamanho nativo da imagem
     float height;
+
+    // Propriedades da classe "Building" do Tiled.
+    // HP 0 significa cenário indestrutível: tiro passa sem efeito.
+    int hp = 0;
+    int maxHp = 0;
+    bool isDestroyed = false;
+    std::string frameDestroyed; // nome do PNG em Buildings/, sem extensão
 };
 
 // Estrutura para cada Camada de Tiles (Tile Layer)
@@ -83,6 +90,19 @@ public:
     bool HasPlayerStart() const { return hasPlayerStart; }
     Vector2 GetPlayerStart() const { return playerStart; }
 
+    // --- Construções destrutíveis ---
+    // O índice é a posição na lista interna de tile objects e vale enquanto o
+    // mapa não for recarregado.
+    int GetObjectCount() const { return (int)objects.size(); }
+    bool IsDestructible(int index) const;
+    bool IsObjectDestroyed(int index) const;
+
+    // Hitbox em coordenadas de TELA (já com o scroll aplicado)
+    Rectangle GetObjectHitbox(int index) const;
+
+    // Aplica dano. Retorna true apenas no tiro que derrubou a construção.
+    bool DamageObject(int index, int damage);
+
     std::vector<EnemySpawnData> PopReadySpawns();
 
 private:
@@ -109,6 +129,9 @@ private:
     std::vector<Tileset> tilesets;
     std::vector<TileLayer> layers;
     std::vector<MapObject> objects; // construções e demais tile objects
+
+    // Sprites de ruína, uma por nome: várias construções repetem o mesmo
+    std::map<std::string, Texture2D> destroyedTextures;
 };
 
 

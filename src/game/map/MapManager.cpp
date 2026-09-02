@@ -111,6 +111,40 @@ bool MapManager::Load(const std::string& jsonFilePath)
                         mo.y = obj.contains("y") ? obj["y"].get<float>() : 0.0f;
                         mo.width = obj.contains("width") ? obj["width"].get<float>() : 0.0f;
                         mo.height = obj.contains("height") ? obj["height"].get<float>() : 0.0f;
+
+                        // Propriedades da classe Building. Sem HP a construção
+                        // é só cenário. EffectDestroyed ainda não é usado.
+                        if (obj.contains("properties")) {
+                            for (const auto& prop : obj["properties"]) {
+                                if (prop["name"] == "HP") {
+                                    if (prop.contains("value") && prop["value"].is_number()) {
+                                        mo.hp = prop["value"].get<int>();
+                                    }
+                                }
+                                else if (prop["name"] == "FrameDestroyed") {
+                                    if (prop.contains("value") && prop["value"].is_string()) {
+                                        mo.frameDestroyed = prop["value"].get<std::string>();
+                                    }
+                                }
+                            }
+                        }
+                        mo.maxHp = mo.hp;
+
+                        // Carrega o sprite de ruína uma vez por nome: as
+                        // construções repetem bastante o mesmo arquivo.
+                        if (!mo.frameDestroyed.empty() &&
+                            destroyedTextures.find(mo.frameDestroyed) == destroyedTextures.end())
+                        {
+                            std::string ruinaPath = basePath + "Buildings/" + mo.frameDestroyed + ".png";
+                            Texture2D ruina = LoadTexture(ruinaPath.c_str());
+
+                            if (ruina.id == 0) {
+                                std::cerr << "[MapManager] Aviso: FrameDestroyed '" << mo.frameDestroyed
+                                          << "' nao encontrado em " << ruinaPath << std::endl;
+                            }
+                            destroyedTextures[mo.frameDestroyed] = ruina;
+                        }
+
                         objects.push_back(mo);
                         continue;
                     }
@@ -335,35 +369,47 @@ void MapManager::DrawObjects(float offsetX, float offsetY, Color tint) const
     const float screenHeight = (float)Config::SCREEN_HEIGHT;
 
     for (const auto& mo : objects) {
-        const Tileset* ts = FindTileset(mo.gid);
-        if (!ts) continue;
-
-        int localId = mo.gid - ts->firstGid;
-
         Texture2D tex = { 0 };
         Rectangle source = { 0.0f, 0.0f, 0.0f, 0.0f };
+        bool usandoRuina = false;
 
-        if (ts->isMultiImage) {
-            auto it = ts->multiTextures.find(localId);
-            if (it == ts->multiTextures.end() || it->second.id == 0) continue;
+        if (mo.isDestroyed) {
+            // Construção derrubada: entra o sprite de ruína no lugar
+            auto it = destroyedTextures.find(mo.frameDestroyed);
+            if (it == destroyedTextures.end() || it->second.id == 0) continue;
             tex = it->second;
             source = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
+            usandoRuina = true;
         } else {
-            if (ts->singleTexture.id == 0) continue;
-            tex = ts->singleTexture;
-            int col = localId % ts->columns;
-            int row = localId / ts->columns;
-            source = {
-                (float)(col * ts->tileWidth),
-                (float)(row * ts->tileHeight),
-                (float)ts->tileWidth,
-                (float)ts->tileHeight
-            };
+            const Tileset* ts = FindTileset(mo.gid);
+            if (!ts) continue;
+
+            int localId = mo.gid - ts->firstGid;
+
+            if (ts->isMultiImage) {
+                auto it = ts->multiTextures.find(localId);
+                if (it == ts->multiTextures.end() || it->second.id == 0) continue;
+                tex = it->second;
+                source = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
+            } else {
+                if (ts->singleTexture.id == 0) continue;
+                tex = ts->singleTexture;
+                int col = localId % ts->columns;
+                int row = localId / ts->columns;
+                source = {
+                    (float)(col * ts->tileWidth),
+                    (float)(row * ts->tileHeight),
+                    (float)ts->tileWidth,
+                    (float)ts->tileHeight
+                };
+            }
         }
 
-        // width/height do objeto valem quando ele foi redimensionado no editor
-        float w = (mo.width > 0.0f) ? mo.width : source.width;
-        float h = (mo.height > 0.0f) ? mo.height : source.height;
+        // width/height do objeto valem quando ele foi redimensionado no editor.
+        // A ruína usa o tamanho nativo dela, para não ser esticada até o
+        // tamanho da casa inteira caso as duas artes tenham medidas diferentes.
+        float w = (!usandoRuina && mo.width > 0.0f) ? mo.width : source.width;
+        float h = (!usandoRuina && mo.height > 0.0f) ? mo.height : source.height;
 
         // O y do Tiled é a BASE do objeto, então o topo fica em y - altura
         float topY = (mo.y - scrollY) - h;
@@ -374,6 +420,76 @@ void MapManager::DrawObjects(float offsetX, float offsetY, Color tint) const
         Rectangle dest = { mo.x + offsetX, topY + offsetY, w, h };
         DrawTexturePro(tex, source, dest, { 0.0f, 0.0f }, 0.0f, tint);
     }
+}
+
+// ---------------------------------------------------------------
+// Construções destrutíveis
+// ---------------------------------------------------------------
+
+// Encolhe a hitbox em relação à arte: as casas têm bastante pixel
+// transparente em volta do telhado, e sem isso o tiro acerta o vazio.
+static const float BUILDING_HITBOX_SCALE = 0.85f;
+
+bool MapManager::IsDestructible(int index) const
+{
+    if (index < 0 || index >= (int)objects.size()) return false;
+    return objects[index].maxHp > 0;
+}
+
+bool MapManager::IsObjectDestroyed(int index) const
+{
+    if (index < 0 || index >= (int)objects.size()) return true;
+    return objects[index].isDestroyed;
+}
+
+Rectangle MapManager::GetObjectHitbox(int index) const
+{
+    if (index < 0 || index >= (int)objects.size()) return { 0.0f, 0.0f, 0.0f, 0.0f };
+
+    const MapObject& mo = objects[index];
+
+    float w = mo.width;
+    float h = mo.height;
+
+    // Objeto sem tamanho no editor: cai no tamanho nativo da imagem
+    if (w <= 0.0f || h <= 0.0f) {
+        const Tileset* ts = FindTileset(mo.gid);
+        if (ts && ts->isMultiImage) {
+            auto it = ts->multiTextures.find(mo.gid - ts->firstGid);
+            if (it != ts->multiTextures.end()) {
+                if (w <= 0.0f) w = (float)it->second.width;
+                if (h <= 0.0f) h = (float)it->second.height;
+            }
+        }
+    }
+
+    float hitW = w * BUILDING_HITBOX_SCALE;
+    float hitH = h * BUILDING_HITBOX_SCALE;
+
+    // O y do Tiled é a BASE do objeto; a caixa fica centrada na arte
+    float topY = (mo.y - scrollY) - h;
+
+    return {
+        mo.x + (w - hitW) / 2.0f,
+        topY + (h - hitH) / 2.0f,
+        hitW,
+        hitH
+    };
+}
+
+bool MapManager::DamageObject(int index, int damage)
+{
+    if (index < 0 || index >= (int)objects.size()) return false;
+
+    MapObject& mo = objects[index];
+    if (mo.maxHp <= 0 || mo.isDestroyed) return false;
+
+    mo.hp -= damage;
+    if (mo.hp > 0) return false;
+
+    mo.hp = 0;
+    mo.isDestroyed = true;
+    return true; // só o tiro que derrubou devolve true
 }
 
 void MapManager::Unload()
@@ -391,6 +507,11 @@ void MapManager::Unload()
         }
         ts.multiTextures.clear();
     }
+    for (auto& pair : destroyedTextures) {
+        if (pair.second.id != 0) UnloadTexture(pair.second);
+    }
+    destroyedTextures.clear();
+
     tilesets.clear();
     layers.clear();
     objects.clear();

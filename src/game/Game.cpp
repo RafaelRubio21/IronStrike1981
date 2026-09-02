@@ -233,7 +233,7 @@ void Game::Update(float deltaTime)
                 // Se esse tiro acabou de destruir o tanque
                 if (e->hp <= 0 && e->isDestroyed)
                 {
-                    explosionManager.Spawn(e->position, ExplosionType::TYPE_0, 1.0f);
+                    explosionManager.Spawn(e->position, ExplosionType::TYPE_3, 1.0f);
                 }
                 else
                 {
@@ -252,6 +252,43 @@ void Game::Update(float deltaTime)
     // Remove os inimigos que sairam da tela
     enemies.erase(std::remove_if(enemies.begin(), enemies.end(),
         [](const std::unique_ptr<EnemyBase>& e) { return !e->isActive; }), enemies.end());
+
+    // Tiros do player contra as construções (classe Building do Tiled)
+    for (int i = 0; i < mapManager.GetObjectCount(); i++)
+    {
+        // Sem HP no mapa é cenário puro: o tiro passa direto
+        if (!mapManager.IsDestructible(i) || mapManager.IsObjectDestroyed(i)) continue;
+
+        Rectangle box = mapManager.GetObjectHitbox(i);
+
+        // Fora da tela não precisa ser testada
+        if (box.y + box.height < 0.0f || box.y > Config::SCREEN_HEIGHT) continue;
+
+        if (player.CheckBulletHits(box))
+        {
+            // Faísca no ponto do impacto
+            float randX = box.x + (float)GetRandomValue(0, (int)box.width);
+            float randY = box.y + (float)GetRandomValue(0, (int)box.height);
+            explosionManager.Spawn({ randX, randY }, ExplosionType::TYPE_2, 0.5f);
+
+            Vector2 centro = { box.x + box.width / 2.0f, box.y + box.height / 2.0f };
+
+            if (mapManager.DamageObject(i, 1))
+            {
+                // Só o tiro que derrubou entra aqui
+                explosionManager.Spawn(centro, ExplosionType::TYPE_0, 2.0f);
+            }
+            else
+            {
+                int randSfx = GetRandomValue(0, IMPACT_SOUND_COUNT - 1);
+                if (impactSounds[randSfx].frameCount != 0)
+                {
+                    SetSoundVolume(impactSounds[randSfx], 0.7f);
+                    PlaySound(impactSounds[randSfx]);
+                }
+            }
+        }
+    }
     
     // Anima e remove explosões
     explosionManager.Update(deltaTime, worldScroll);
