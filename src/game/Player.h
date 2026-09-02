@@ -21,6 +21,10 @@ public:
     void Unload();
     
     Vector2 GetPosition() const { return position; }
+
+    // Decolagem concluída: já pode voar, atirar e o mapa já pode rolar.
+    // É a mesma condição que libera o controle do jogador.
+    bool IsAirborne() const { return scale >= 1.0f; }
     
     int hp;
     float hitTimer;

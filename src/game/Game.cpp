@@ -14,14 +14,24 @@ void Game::Initialize()
     camera.rotation = 0.0f;
     camera.zoom = 1.0f;
 
-    player.Initialize({ Config::SCREEN_WIDTH / 2.0f, 600.0f });
-
     enemies.clear();
     explosionManager.Clear();
     enemyBullets.clear();
     tankSpawnTimer = 0.0f;
 
     mapManager.Load("assets/maps/level1.json");
+
+    // O helicóptero nasce onde o objeto PlayerPosition estiver no mapa. Como o
+    // Tiled dá a posição em coordenadas de mundo, tiramos o scroll inicial para
+    // chegar na tela. Sem o objeto no mapa, cai no centro embaixo.
+    Vector2 playerStart = { Config::SCREEN_WIDTH / 2.0f, 600.0f };
+    if (mapManager.HasPlayerStart())
+    {
+        const Vector2 world = mapManager.GetPlayerStart();
+        playerStart = { world.x, world.y - mapManager.GetScrollY() };
+    }
+
+    player.Initialize(playerStart);
 
     scrollSpeed = 35.0f; // Pixels por segundo
     
@@ -70,10 +80,14 @@ void Game::Update(float deltaTime)
     }
 
     // Rola o cenario
+    // O cenário só começa a rolar depois que o helicóptero decola. Antes disso
+    // ele ainda está subindo do chão, e o mapa fica parado esperando.
+    const float targetScroll = player.IsAirborne() ? scrollSpeed : 0.0f;
+
     // Velocidade com que o cenário andou DE FATO neste frame. No fim do mapa
     // o scroll trava, e os inimigos precisam travar junto: se continuassem
     // descendo, sairiam do traçado desenhado no Tiled.
-    const float scrolled = mapManager.Update(deltaTime, scrollSpeed);
+    const float scrolled = mapManager.Update(deltaTime, targetScroll);
     const float worldScroll = (deltaTime > 0.0f) ? (scrolled / deltaTime) : 0.0f;
 
     player.Update(deltaTime);

@@ -79,10 +79,18 @@ public:
     int GetTileWidth() const { return tileWidth; }
     float GetScrollY() const { return scrollY; }
 
+    // Objeto "PlayerPosition" do mapa: onde o helicóptero começa (mundo)
+    bool HasPlayerStart() const { return hasPlayerStart; }
+    Vector2 GetPlayerStart() const { return playerStart; }
+
     std::vector<EnemySpawnData> PopReadySpawns();
 
 private:
     std::vector<EnemySpawnData> pendingSpawns;
+
+    Vector2 playerStart = { 0.0f, 0.0f };
+    bool hasPlayerStart = false;
+
     bool isLoaded;
     int mapWidth;    
     int mapHeight;   

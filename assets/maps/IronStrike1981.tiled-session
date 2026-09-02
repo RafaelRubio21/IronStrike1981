@@ -32,6 +32,10 @@
             "scaleInDock": 1,
             "scaleInEditor": 1
         },
+        "Road/Road.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1
+        },
         "Water/water.tsj": {
             "dynamicWrapping": true,
             "scaleInDock": 1,
@@ -47,6 +51,10 @@
                 "x": 517.5,
                 "y": 5151.5
             }
+        },
+        "level1.json#Road": {
+            "dynamicWrapping": true,
+            "scaleInEditor": 1
         },
         "level1.json#agua": {
             "scaleInEditor": 1
@@ -92,8 +100,8 @@
         }
     },
     "last.exportedFilePath": "D:/Projetos/IronStrike1981/assets/maps",
-    "last.externalTilesetPath": "D:/Projetos/IronStrike1981/assets/maps/Water",
-    "last.imagePath": "D:/Projetos/IronStrike1981/assets/maps/SmallHouses",
+    "last.externalTilesetPath": "D:/Projetos/IronStrike1981/assets/maps/Road",
+    "last.imagePath": "D:/Projetos/IronStrike1981/assets/maps/Road",
     "last.objectTemplatePath": "D:/Projetos/IronStrike1981/assets/maps",
     "last.objectTypesPath": "D:/Projetos/IronStrike1981/assets/maps/propertytypes.json",
     "map.lastUsedExportFilter": "All Files (*)",
