@@ -10,5 +10,52 @@
     "properties": [
     ],
     "propertyTypes": [
+        {
+            "id": 3,
+            "name": "EEnemyType",
+            "storageType": "string",
+            "type": "enum",
+            "values": [
+                "TANK",
+                "HEAVY_TANK"
+            ],
+            "valuesAsFlags": false
+        },
+        {
+            "color": "#ffa0a0a4",
+            "drawFill": true,
+            "id": 1,
+            "members": [
+                {
+                    "name": "EnemyType",
+                    "propertyType": "EEnemyType",
+                    "type": "string",
+                    "value": "TANK"
+                },
+                {
+                    "name": "HP",
+                    "type": "int",
+                    "value": 0
+                },
+                {
+                    "name": "Speed",
+                    "type": "float",
+                    "value": 0
+                }
+            ],
+            "name": "EnemyRoute",
+            "type": "class",
+            "useAs": [
+                "property",
+                "map",
+                "layer",
+                "object",
+                "tile",
+                "tileset",
+                "wangcolor",
+                "wangset",
+                "project"
+            ]
+        }
     ]
 }

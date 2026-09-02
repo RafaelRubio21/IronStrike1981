@@ -21,6 +21,9 @@ public:
     void Shutdown();
 
 private:
+    // Joga o canvas de sombras na tela com a transparência final
+    void StampShadows();
+
     Player player;
     
     std::vector<std::unique_ptr<EnemyBase>> enemies;

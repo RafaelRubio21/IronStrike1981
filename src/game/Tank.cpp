@@ -39,7 +39,7 @@ static Sound tankMovingSnd = {0};
 static Sound tankShootingSnd = {0};
 static bool tankAudioLoaded = false;
 
-void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::vector<Vector2> path, Rectangle patrolArea)
+void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::vector<Vector2> path, Rectangle patrolArea, EnemyStats mapStats)
 {
     type = tankType;
     position = startPos;
@@ -72,7 +72,12 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::v
         fireOffsetY = -50.0f;
         scale = 1.0f;
     }
-    
+
+    // O que veio do Tiled manda. Os demais atributos (giro da torreta, do
+    // chassi e os offsets do canhão) continuam sendo característica do modelo.
+    if (mapStats.hp > 0) hp = mapStats.hp;
+    if (mapStats.speed > 0.0f) speed = mapStats.speed;
+
     currentFrame = 0;
     frameTimer = 0.0f;
     currentSpeedMult = 1.0f;
@@ -261,19 +266,6 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, floa
 {
     if (!isActive) return;
     
-    // Lógica da Parada Estratégica
-    // O tanque avisa que vai atirar, freia suavemente (inércia), e acelera suavemente depois.
-    bool isAiming = (!isCannonShooting && shootCooldown <= 0.5f && !playerDestroyed);
-    bool shouldStop = (isAiming || isCannonShooting || playerDestroyed);
-    
-    if (shouldStop) {
-        currentSpeedMult -= 2.5f * deltaTime; // Freia em 0.4s
-        if (currentSpeedMult < 0.0f) currentSpeedMult = 0.0f;
-    } else {
-        currentSpeedMult += 1.5f * deltaTime; // Acelera um pouco mais devagar
-        if (currentSpeedMult > 1.0f) currentSpeedMult = 1.0f;
-    }
-    
     // Rola a cerca de patrulha
     if (isPatrolling) {
         patrolBounds.y += scrollSpeed * deltaTime;
@@ -285,6 +277,8 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, floa
     }
 
     // NAVEGAÇÃO POR WAYPOINTS
+    bool needsToTurn = false; // chassi ainda desalinhado com o próximo waypoint
+
     if (!isDestroyed && currentWaypoint >= 0 && currentWaypoint < (int)waypoints.size()) {
         Vector2 target = waypoints[currentWaypoint];
         
@@ -338,26 +332,35 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, floa
 
             rotation += diff;
 
-            // Enquanto não estiver apontado pro destino, o tanque fica parado
-            // girando no próprio eixo. Só depois de alinhado ele arranca, e aí
-            // anda em linha reta até o waypoint — é isso que mantém o traçado
-            // da rota. Se andasse enquanto gira, faria um arco e sairia da reta.
+            // Enquanto não estiver apontado pro destino o tanque precisa girar,
+            // e só volta a andar depois de alinhado — é isso que mantém o traçado
+            // da rota. Note que quem tira a velocidade NÃO é este bloco: ele só
+            // levanta a flag, e a inércia lá embaixo freia até parar.
             float remaining = fabsf(NormalizeAngleDiff(targetRot - rotation));
+            needsToTurn = (remaining > TANK_ALIGN_TOLERANCE);
 
-            if (remaining <= TANK_ALIGN_TOLERANCE)
-            {
-                // Anda pra FRENTE, na direção em que o chassi aponta, nunca de lado
-                float rad = rotation * DEG2RAD;
-                Vector2 forward = { -sinf(rad), cosf(rad) };
+            // Anda pra FRENTE, na direção em que o chassi aponta, nunca de lado
+            float rad = rotation * DEG2RAD;
+            Vector2 forward = { -sinf(rad), cosf(rad) };
 
-                velocity.x = forward.x * speed;
-                velocity.y = forward.y * speed;
-            }
-            else
-            {
-                velocity = { 0.0f, 0.0f };
-            }
+            velocity.x = forward.x * speed;
+            velocity.y = forward.y * speed;
         }
+    }
+
+    // Lógica da Parada Estratégica
+    // O tanque freia suavemente (inércia) e acelera suavemente depois, tanto pra
+    // atirar quanto pra fazer a curva: ele chega derrapando no vértice da rota,
+    // gira parado e volta a acelerar, em vez de travar e destravar na seco.
+    bool isAiming = (!isCannonShooting && shootCooldown <= 0.5f && !playerDestroyed);
+    bool shouldStop = (isAiming || isCannonShooting || playerDestroyed || needsToTurn || mustYield);
+
+    if (shouldStop) {
+        currentSpeedMult -= 2.5f * deltaTime; // Freia em 0.4s
+        if (currentSpeedMult < 0.0f) currentSpeedMult = 0.0f;
+    } else {
+        currentSpeedMult += 1.5f * deltaTime; // Acelera um pouco mais devagar
+        if (currentSpeedMult > 1.0f) currentSpeedMult = 1.0f;
     }
 
     // Salva velocidade original e aplica o multiplicador de inércia antes do BaseUpdate

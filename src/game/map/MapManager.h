@@ -1,5 +1,6 @@
 #pragma once
 #include <raylib.h>
+#include "../EnemyBase.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -15,6 +16,7 @@ struct EnemySpawnData {
     float width;
     float height;
     int quantity;
+    EnemyStats stats; // HP e Speed vindos da classe EnemyRoute
     std::vector<Vector2> path;
 };
 
@@ -36,6 +38,17 @@ struct Tileset {
     int tileHeight;
 };
 
+// Objeto com imagem colocado numa object layer do Tiled (tile object), como as
+// construções. Diferente de um objeto retangular, o Tiled ancora este pelo canto
+// INFERIOR esquerdo, e o x/y aqui é o do editor, em coordenadas de mundo.
+struct MapObject {
+    int gid;
+    float x;
+    float y;
+    float width;   // 0 = usar o tamanho nativo da imagem
+    float height;
+};
+
 // Estrutura para cada Camada de Tiles (Tile Layer)
 struct TileLayer {
     std::string name;
@@ -51,8 +64,15 @@ public:
     ~MapManager();
 
     bool Load(const std::string& jsonFilePath);
-    void Update(float deltaTime, float speed);
-    void Render() const;
+    // Retorna quantos pixels o cenário andou de fato neste frame
+    float Update(float deltaTime, float speed);
+
+    // O desenho é em três etapas porque a sombra das construções precisa cair
+    // ENTRE o chão e a própria construção: chão -> sombras -> construções.
+    void RenderGround() const;
+    void RenderObjectShadows() const;
+    void RenderObjects() const;
+
     void Unload();
 
     int GetMapWidth() const { return mapWidth; }
@@ -71,8 +91,16 @@ private:
 
     float scrollY;   
 
+    // Acha o tileset dono de um gid (o de maior firstGid que ainda cabe nele)
+    const Tileset* FindTileset(int gid) const;
+
+    // Percorre os tile objects uma vez só; a sombra é o mesmo desenho
+    // deslocado e pintado de preto.
+    void DrawObjects(float offsetX, float offsetY, Color tint) const;
+
     std::vector<Tileset> tilesets;
     std::vector<TileLayer> layers;
+    std::vector<MapObject> objects; // construções e demais tile objects
 };
 
 

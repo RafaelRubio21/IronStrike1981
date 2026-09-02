@@ -3,6 +3,16 @@
 #include "Constants.h"
 #include <cmath>
 
+// Valores definidos por objeto no Tiled (classe EnemyRoute). Zero significa
+// "não veio do mapa": nesse caso o inimigo fica com o padrão do seu modelo.
+// O Tiled só grava a propriedade quando ela difere do default da classe, então
+// a maioria dos objetos chega aqui com os campos zerados — e isso é esperado.
+struct EnemyStats
+{
+    int hp = 0;
+    float speed = 0.0f;
+};
+
 class EnemyBase
 {
 public:
@@ -111,6 +121,7 @@ public:
     bool isDestroyed = false;
     bool isActive = false;
     bool hasFired = false;
+    bool mustYield = false; // tem alguém na frente: freia, mas não sai da rota
     
     float hitTimer = 0.0f;
     float shootCooldown = 0.0f;

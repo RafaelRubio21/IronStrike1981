@@ -23,7 +23,7 @@ void Game::Initialize()
 
     mapManager.Load("assets/maps/level1.json");
 
-    scrollSpeed = 10.0f; // Pixels por segundo
+    scrollSpeed = 35.0f; // Pixels por segundo
     
     // Inicia o Canvas Global de Sombras do jogo
     globalShadowTarget = LoadRenderTexture(Config::SCREEN_WIDTH, Config::SCREEN_HEIGHT);
@@ -70,7 +70,11 @@ void Game::Update(float deltaTime)
     }
 
     // Rola o cenario
-    mapManager.Update(deltaTime, scrollSpeed);
+    // Velocidade com que o cenário andou DE FATO neste frame. No fim do mapa
+    // o scroll trava, e os inimigos precisam travar junto: se continuassem
+    // descendo, sairiam do traçado desenhado no Tiled.
+    const float scrolled = mapManager.Update(deltaTime, scrollSpeed);
+    const float worldScroll = (deltaTime > 0.0f) ? (scrolled / deltaTime) : 0.0f;
 
     player.Update(deltaTime);
     
@@ -117,37 +121,55 @@ void Game::Update(float deltaTime)
                     screenPath.push_back({ wp.x, wp.y - mapManager.GetScrollY() });
                 }
 
-                // Fábrica de Inimigos: hoje todo enemyType cai no Tank.
-                // Quando existir um segundo inimigo, é aqui que o tipo escolhe a classe.
+                // Fábrica de Inimigos. Hoje os dois tipos são Tank, mudando só
+                // o modelo; quando existir outra classe de inimigo é aqui que ela
+                // entra, olhando o mesmo spawn.enemyType.
+                const int tankType = (spawn.enemyType == "HEAVY_TANK") ? 1 : 0;
+
                 auto t = std::make_unique<Tank>();
-                t->Initialize({ screenX, screenY }, spawn.direction, 0, screenPath, patrolArea);
+                t->Initialize({ screenX, screenY }, spawn.direction, tankType, screenPath, patrolArea, spawn.stats);
                 enemies.push_back(std::move(t));
             }
         }
     }
     
-    // Sistema Anti-Trombada (Separation Behavior)
+    // Sistema Anti-Trombada (Ceder Passagem)
+    // Empurrar a posição tirava o tanque do traçado desenhado no Tiled, e ele
+    // acabava atravessando lugares por onde a rota não passa. Agora ninguém sai
+    // do lugar: quem está indo em cima do outro só freia e espera a passagem.
+    for (auto& e : enemies) e->mustYield = false;
+
     for (size_t i = 0; i < enemies.size(); i++) {
         for (size_t j = i + 1; j < enemies.size(); j++) {
             if (enemies[i]->isDestroyed || enemies[j]->isDestroyed) continue;
-            
+
             Rectangle r1 = enemies[i]->GetHitbox();
             Rectangle r2 = enemies[j]->GetHitbox();
-            if (CheckCollisionRecs(r1, r2)) {
-                Vector2 c1 = { r1.x + r1.width/2.0f, r1.y + r1.height/2.0f };
-                Vector2 c2 = { r2.x + r2.width/2.0f, r2.y + r2.height/2.0f };
-                float dx = c1.x - c2.x;
-                float dy = c1.y - c2.y;
-                float dist = sqrt(dx*dx + dy*dy);
-                if (dist == 0.0f) { dx = 1.0f; dist = 1.0f; }
-                
-                // Força de repulsão suave (Bumper car)
-                float pushForce = 30.0f * deltaTime;
-                enemies[i]->position.x += (dx/dist) * pushForce;
-                enemies[i]->position.y += (dy/dist) * pushForce;
-                enemies[j]->position.x -= (dx/dist) * pushForce;
-                enemies[j]->position.y -= (dy/dist) * pushForce;
-            }
+            if (!CheckCollisionRecs(r1, r2)) continue;
+
+            Vector2 c1 = { r1.x + r1.width/2.0f, r1.y + r1.height/2.0f };
+            Vector2 c2 = { r2.x + r2.width/2.0f, r2.y + r2.height/2.0f };
+
+            // Vetor unitário que aponta de i para j
+            float dx = c2.x - c1.x;
+            float dy = c2.y - c1.y;
+            float dist = sqrtf(dx*dx + dy*dy);
+            if (dist < 0.001f) { dx = 0.0f; dy = 1.0f; dist = 1.0f; }
+
+            float nx = dx / dist;
+            float ny = dy / dist;
+
+            // O quanto cada um está avançando na direção do outro
+            float avancoI =  (enemies[i]->velocity.x * nx) + (enemies[i]->velocity.y * ny);
+            float avancoJ = -((enemies[j]->velocity.x * nx) + (enemies[j]->velocity.y * ny));
+
+            // Encostados mas já se separando: não há trombada a evitar
+            if (avancoI <= 0.0f && avancoJ <= 0.0f) continue;
+
+            // Cede só quem avança mais. Se os dois cedessem numa batida de
+            // frente, ambos parariam colados e nunca mais sairiam dali.
+            if (avancoI >= avancoJ) enemies[i]->mustYield = true;
+            else                    enemies[j]->mustYield = true;
         }
     }
 
@@ -155,9 +177,9 @@ void Game::Update(float deltaTime)
     for (auto& e : enemies)
     {
         // Aplica o movimento da câmera sobre todos os inimigos (Ilusão de movimento)
-        e->position.y += scrollSpeed * deltaTime;
+        e->position.y += worldScroll * deltaTime;
 
-        e->Update(deltaTime, player.GetPosition(), player.isDestroyed, scrollSpeed);
+        e->Update(deltaTime, player.GetPosition(), player.isDestroyed, worldScroll);
 
         // Se o tanque atirou neste frame, instanciamos a bala inimiga!
         if (e->hasFired)
@@ -218,7 +240,7 @@ void Game::Update(float deltaTime)
         [](const std::unique_ptr<EnemyBase>& e) { return !e->isActive; }), enemies.end());
     
     // Anima e remove explosões
-    explosionManager.Update(deltaTime, scrollSpeed);
+    explosionManager.Update(deltaTime, worldScroll);
     
     // Atualiza Balas Inimigas
     for (auto& b : enemyBullets)
@@ -254,33 +276,48 @@ void Game::Render()
     BeginDrawing();
     ClearBackground({ 34, 139, 34, 255 }); // Verde Floresta Escuro temporario
 
-    // Desenha o fundo do mapa (Chão, Água)
-    mapManager.Render();
+    // Desenha o fundo do mapa (Chão, Água). As construções NÃO entram aqui:
+    // a sombra delas precisa ser carimbada antes delas próprias.
+    mapManager.RenderGround();
 
-    // ETAPA 2: SHADOW PASS GLOBAL
+    // ETAPA 2: SHADOW PASS DO QUE ESTÁ NO CHÃO (construções e inimigos).
+    // O player fica de fora de propósito: ele voa, e a sombra dele é carimbada
+    // só lá embaixo, depois que casas e tanques já estiverem desenhados.
     BeginTextureMode(globalShadowTarget);
         ClearBackground(BLANK); // Limpa o fundo do buffer com alfa 0
-        
-        // Desenha a sombra de todos os inimigos primeiro
+
+        // Sombra das construções
+        mapManager.RenderObjectShadows();
+
+        // Desenha a sombra de todos os inimigos
         for (const auto& e : enemies) e->DrawShadows();
-        
-        // Desenha a sombra do player
-        player.DrawShadows();
     EndTextureMode();
-    
+
     BeginMode2D(camera);
         // Quando criarmos as tilesets (chao e agua), desenhamos elas aqui embaixo!
         for (const auto& e : enemies) e->DrawGroundEffects();
     EndMode2D();
 
-    // ETAPA 3: CARIMBA O CANVAS DE SOMBRAS UNIFICADO
-    Rectangle sourceRec = { 0.0f, 0.0f, (float)globalShadowTarget.texture.width, -(float)globalShadowTarget.texture.height };
-    Rectangle destRec = { 0.0f, 0.0f, (float)globalShadowTarget.texture.width, (float)globalShadowTarget.texture.height };
-    // Aplica o nivel de transparencia nas sombras unificadas!
-    DrawTexturePro(globalShadowTarget.texture, sourceRec, destRec, { 0.0f, 0.0f }, 0.0f, { 255, 255, 255, 80 });
+    // ETAPA 3: CARIMBA AS SOMBRAS DO CHÃO
+    StampShadows();
+
+    // ETAPA 3.5: AS CONSTRUÇÕES, POR CIMA DA PRÓPRIA SOMBRA
+    mapManager.RenderObjects();
 
     // ETAPA 4: DESENHA AS CORES REAIS DOS OBJETOS POR CIMA DA SOMBRA
     for (const auto& e : enemies) e->DrawBody();
+
+    // ETAPA 4.5: SOMBRA DO HELICÓPTERO, POR CIMA DE TUDO QUE ESTÁ NO CHÃO.
+    // Ele voa acima do cenário, então a sombra dele tem que cair SOBRE as
+    // casas e os tanques. Reaproveitamos o mesmo canvas: limpa e usa de novo.
+    BeginTextureMode(globalShadowTarget);
+        ClearBackground(BLANK);
+        player.DrawShadows();
+    EndTextureMode();
+
+    StampShadows();
+
+    // ETAPA 4.6: E só então o helicóptero em si
     player.DrawBody();
     
     // ETAPA 5: DESENHAR FUMAÇAS E EXPLOSÕES POR CIMA DE TUDO
@@ -305,6 +342,17 @@ void Game::Render()
 
 }
 
+
+void Game::StampShadows()
+{
+    // O height negativo no source inverte a textura: render target do OpenGL
+    // vem de cabeça para baixo.
+    Rectangle sourceRec = { 0.0f, 0.0f, (float)globalShadowTarget.texture.width, -(float)globalShadowTarget.texture.height };
+    Rectangle destRec = { 0.0f, 0.0f, (float)globalShadowTarget.texture.width, (float)globalShadowTarget.texture.height };
+
+    // Aplica o nivel de transparencia nas sombras unificadas!
+    DrawTexturePro(globalShadowTarget.texture, sourceRec, destRec, { 0.0f, 0.0f }, 0.0f, { 255, 255, 255, 80 });
+}
 
 void Game::Shutdown()
 {

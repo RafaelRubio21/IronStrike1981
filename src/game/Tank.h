@@ -8,7 +8,7 @@
 class Tank : public EnemyBase
 {
 public:
-    void Initialize(Vector2 startPos, int spawnDirection, int tankType = 0, std::vector<Vector2> path = {}, Rectangle patrolArea = {0,0,0,0}); 
+    void Initialize(Vector2 startPos, int spawnDirection, int tankType = 0, std::vector<Vector2> path = {}, Rectangle patrolArea = {0,0,0,0}, EnemyStats mapStats = {}); 
     void Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, float scrollSpeed = 0.0f) override;
     void DrawShadows() const override;
     void DrawBody() const override;

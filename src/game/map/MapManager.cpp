@@ -72,6 +72,7 @@ bool MapManager::Load(const std::string& jsonFilePath)
     }
 
     pendingSpawns.clear();
+    objects.clear();
 
     for (const auto& layer : j["layers"]) {
         if (layer["type"] == "tilelayer") {
@@ -99,6 +100,20 @@ bool MapManager::Load(const std::string& jsonFilePath)
         else if (layer["type"] == "objectgroup") {
             if (layer.contains("objects")) {
                 for (const auto& obj : layer["objects"]) {
+                    // Objeto COM imagem é cenário (construção, decoração), não
+                    // spawn de inimigo. O gid é quem diz qual imagem desenhar, e
+                    // os bits altos carregam os flags de espelhamento do Tiled.
+                    if (obj.contains("gid")) {
+                        MapObject mo;
+                        mo.gid = obj["gid"].get<int>() & 0x0FFFFFFF;
+                        mo.x = obj.contains("x") ? obj["x"].get<float>() : 0.0f;
+                        mo.y = obj.contains("y") ? obj["y"].get<float>() : 0.0f;
+                        mo.width = obj.contains("width") ? obj["width"].get<float>() : 0.0f;
+                        mo.height = obj.contains("height") ? obj["height"].get<float>() : 0.0f;
+                        objects.push_back(mo);
+                        continue;
+                    }
+
                     EnemySpawnData spawn;
                     spawn.x = obj.contains("x") ? obj["x"].get<float>() : 0.0f;
                     spawn.y = obj.contains("y") ? obj["y"].get<float>() : 0.0f;
@@ -128,11 +143,23 @@ bool MapManager::Load(const std::string& jsonFilePath)
                             else if (prop["name"] == "Quantity") {
                                 spawn.quantity = prop.value("value", 1);
                             }
+                            else if (prop["name"] == "HP") {
+                                if (prop.contains("value") && prop["value"].is_number()) {
+                                    spawn.stats.hp = prop["value"].get<int>();
+                                }
+                            }
+                            else if (prop["name"] == "Speed") {
+                                if (prop.contains("value") && prop["value"].is_number()) {
+                                    spawn.stats.speed = prop["value"].get<float>();
+                                }
+                            }
                         }
                     }
-                    
-                    // Fallback se o usuário não botou EnemyType mas a classe é Tank
-                    if (spawn.enemyType.empty() && spawn.type == "Tank") {
+
+                    // Quem não declarou o EnemyType vira TANK. O Tiled só grava a
+                    // propriedade quando ela difere do default da classe, então um
+                    // objeto EnemyRoute deixado no padrão chega aqui sem ela.
+                    if (spawn.enemyType.empty()) {
                         spawn.enemyType = "TANK";
                     }
                     
@@ -143,6 +170,19 @@ bool MapManager::Load(const std::string& jsonFilePath)
                             if (pt.contains("x")) px += pt["x"].get<float>();
                             if (pt.contains("y")) py += pt["y"].get<float>();
                             spawn.path.push_back({ px, py });
+                        }
+
+                        // O Tiled guarda os vértices relativos à origem do objeto,
+                        // e o primeiro NÃO é necessariamente (0,0): basta arrastar
+                        // um vértice no editor que ele deixa de ser. Como o tanque
+                        // nasce no início do traçado e o Tank::Initialize pula o
+                        // waypoint 0 justamente por assumir que nasceu nele, a
+                        // origem do spawn tem que ser o primeiro ponto da rota.
+                        // Sem isso o tanque nascia fora da linha e cortava caminho
+                        // direto pro segundo vértice.
+                        if (!spawn.path.empty()) {
+                            spawn.x = spawn.path[0].x;
+                            spawn.y = spawn.path[0].y;
                         }
                     }
                     
@@ -157,23 +197,44 @@ bool MapManager::Load(const std::string& jsonFilePath)
     return true;
 }
 
-void MapManager::Update(float deltaTime, float speed)
+float MapManager::Update(float deltaTime, float speed)
 {
-    if (!isLoaded) return;
-    
+    if (!isLoaded) return 0.0f;
+
+    const float anterior = scrollY;
+
     scrollY -= speed * deltaTime;
-    if (scrollY < 0.0f) scrollY = 0.0f; 
+    if (scrollY < 0.0f) scrollY = 0.0f;
+
+    // Devolve quantos pixels o cenário REALMENTE andou. No fim do mapa o
+    // clamp acima trava o scroll, e quem move os inimigos precisa saber
+    // disso para não continuar empurrando eles para baixo sozinho.
+    return anterior - scrollY;
 }
 
-void MapManager::Render() const
+const Tileset* MapManager::FindTileset(int gid) const
+{
+    for (auto it = tilesets.rbegin(); it != tilesets.rend(); ++it) {
+        if (gid >= it->firstGid) return &(*it);
+    }
+    return nullptr;
+}
+
+void MapManager::RenderGround() const
 {
     if (!isLoaded) return;
 
     const float screenWidth = (float)Config::SCREEN_WIDTH;
     const float screenHeight = (float)Config::SCREEN_HEIGHT;
 
-    // Margem de segurança para desenhar construções grandes que ultrapassam o tamanho de 1 bloco (64x64)
-    int margin = 5; 
+    // Margem de segurança para as construções que ultrapassam 1 bloco. Como
+    // elas crescem para cima, um tile abaixo da tela ainda pode aparecer nela,
+    // por isso a margem sai da altura do tileset mais alto e não de um chute.
+    int tallest = tileHeight;
+    for (const auto& ts : tilesets) {
+        if (ts.tileHeight > tallest) tallest = ts.tileHeight;
+    }
+    int margin = (tallest / tileHeight) + 2; 
 
     int startY = (int)(scrollY / tileHeight) - margin;
     int endY = (int)(scrollY / tileHeight) + (int)(screenHeight / tileHeight) + margin;
@@ -199,27 +260,26 @@ void MapManager::Render() const
                 gid &= 0x0FFFFFFF;
                 if (gid == 0) continue; 
 
-                const Tileset* ts = nullptr;
-                for (auto it = tilesets.rbegin(); it != tilesets.rend(); ++it) {
-                    if (gid >= it->firstGid) {
-                        ts = &(*it);
-                        break;
-                    }
-                }
+                const Tileset* ts = FindTileset(gid);
 
                 if (ts) {
                     int localId = gid - ts->firstGid;
-                    Vector2 destPos = {
-                        (float)(x * tileWidth),
-                        (float)(y * tileHeight) - scrollY
-                    };
+
+                    // Canto INFERIOR esquerdo da célula. O Tiled ancora o tile
+                    // pela base: uma imagem mais alta que o grid cresce para
+                    // cima, ela não desce. Um prédio de 129px numa célula de 64
+                    // aparecia 65px abaixo do lugar por causa disso, cobrindo o
+                    // que estava embaixo dele.
+                    float cellLeft = (float)(x * tileWidth);
+                    float cellBottom = (float)(y * tileHeight) + (float)tileHeight - scrollY;
 
                     if (ts->isMultiImage) {
                         auto it = ts->multiTextures.find(localId);
                         if (it != ts->multiTextures.end()) {
+                            // Cada imagem da coleção tem o seu próprio tamanho
+                            Vector2 destPos = { cellLeft, cellBottom - (float)it->second.height };
                             DrawTextureV(it->second, destPos, tint);
-                            
-                            }
+                        }
                     } else {
                         if (ts->singleTexture.id != 0) {
                             int col = localId % ts->columns;
@@ -230,12 +290,80 @@ void MapManager::Render() const
                                 (float)ts->tileWidth,
                                 (float)ts->tileHeight
                             };
+                            Vector2 destPos = { cellLeft, cellBottom - (float)ts->tileHeight };
                             DrawTextureRec(ts->singleTexture, sourceRec, destPos, tint);
                         }
                     }
                 }
             }
         }
+    }
+
+}
+
+// Distância que a sombra das construções cai. Maior que a dos tanques (8px)
+// porque as casas são bem mais altas. A transparência não é definida aqui:
+// quem controla é o carimbo do canvas global de sombras, no Game.
+static const float BUILDING_SHADOW_OFFSET = 16.0f;
+
+void MapManager::RenderObjectShadows() const
+{
+    if (!isLoaded) return;
+    DrawObjects(BUILDING_SHADOW_OFFSET, BUILDING_SHADOW_OFFSET, BLACK);
+}
+
+void MapManager::RenderObjects() const
+{
+    if (!isLoaded) return;
+    DrawObjects(0.0f, 0.0f, WHITE);
+}
+
+// ---------------------------------------------------------------
+// Tile objects das object layers (as construções).
+// ---------------------------------------------------------------
+void MapManager::DrawObjects(float offsetX, float offsetY, Color tint) const
+{
+    const float screenHeight = (float)Config::SCREEN_HEIGHT;
+
+    for (const auto& mo : objects) {
+        const Tileset* ts = FindTileset(mo.gid);
+        if (!ts) continue;
+
+        int localId = mo.gid - ts->firstGid;
+
+        Texture2D tex = { 0 };
+        Rectangle source = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+        if (ts->isMultiImage) {
+            auto it = ts->multiTextures.find(localId);
+            if (it == ts->multiTextures.end() || it->second.id == 0) continue;
+            tex = it->second;
+            source = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
+        } else {
+            if (ts->singleTexture.id == 0) continue;
+            tex = ts->singleTexture;
+            int col = localId % ts->columns;
+            int row = localId / ts->columns;
+            source = {
+                (float)(col * ts->tileWidth),
+                (float)(row * ts->tileHeight),
+                (float)ts->tileWidth,
+                (float)ts->tileHeight
+            };
+        }
+
+        // width/height do objeto valem quando ele foi redimensionado no editor
+        float w = (mo.width > 0.0f) ? mo.width : source.width;
+        float h = (mo.height > 0.0f) ? mo.height : source.height;
+
+        // O y do Tiled é a BASE do objeto, então o topo fica em y - altura
+        float topY = (mo.y - scrollY) - h;
+
+        // Culling: nada a fazer se está todo acima ou todo abaixo da tela
+        if (topY + h < 0.0f || topY > screenHeight) continue;
+
+        Rectangle dest = { mo.x + offsetX, topY + offsetY, w, h };
+        DrawTexturePro(tex, source, dest, { 0.0f, 0.0f }, 0.0f, tint);
     }
 }
 
@@ -256,6 +384,7 @@ void MapManager::Unload()
     }
     tilesets.clear();
     layers.clear();
+    objects.clear();
     isLoaded = false;
 }
 
