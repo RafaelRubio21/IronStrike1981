@@ -21,7 +21,7 @@ void Game::Initialize()
 
     mapManager.Load("assets/maps/level1.json");
 
-    // O helicóptero nasce onde o objeto PlayerPosition estiver no mapa. Como o
+    // O helicóptero nasce onde o objeto PlayerStartPosition estiver no mapa. Como o
     // Tiled dá a posição em coordenadas de mundo, tiramos o scroll inicial para
     // chegar na tela. Sem o objeto no mapa, cai no centro embaixo.
     Vector2 playerStart = { Config::SCREEN_WIDTH / 2.0f, 600.0f };
@@ -33,7 +33,7 @@ void Game::Initialize()
 
     player.Initialize(playerStart);
 
-    scrollSpeed = 35.0f; // Pixels por segundo
+    scrollSpeed = 75.0f; // Pixels por segundo
     
     // Inicia o Canvas Global de Sombras do jogo
     globalShadowTarget = LoadRenderTexture(Config::SCREEN_WIDTH, Config::SCREEN_HEIGHT);
@@ -89,6 +89,14 @@ void Game::Update(float deltaTime)
     // descendo, sairiam do traçado desenhado no Tiled.
     const float scrolled = mapManager.Update(deltaTime, targetScroll);
     const float worldScroll = (deltaTime > 0.0f) ? (scrolled / deltaTime) : 0.0f;
+
+    // FIM DE FASE: o mapa acabou de rolar, então o helicóptero vai pousar
+    if (mapManager.IsAtEnd() && mapManager.HasPlayerFinish() &&
+        !player.IsLanding() && !player.isDestroyed)
+    {
+        const Vector2 world = mapManager.GetPlayerFinish();
+        player.StartLanding({ world.x, world.y - mapManager.GetScrollY() });
+    }
 
     player.Update(deltaTime);
     

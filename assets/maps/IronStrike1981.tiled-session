@@ -43,17 +43,19 @@
         },
         "level1.json": {
             "expandedObjectLayers": [
+                10,
                 6
             ],
             "scale": 1,
-            "selectedLayer": 3,
+            "selectedLayer": 6,
             "viewCenter": {
-                "x": 517.5,
-                "y": 5151.5
+                "x": 535,
+                "y": 5796.5
             }
         },
         "level1.json#Road": {
             "dynamicWrapping": true,
+            "scaleInDock": 1,
             "scaleInEditor": 1
         },
         "level1.json#agua": {
@@ -116,8 +118,8 @@
     "project": "IronStrike1981.tiled-project",
     "property.type": "int",
     "recentFiles": [
-        "level2.json",
         "level1.json",
+        "level2.json",
         "Asphalt/asphalt.tsx",
         "Water/water.tsj",
         "Grass/grass.tsx",

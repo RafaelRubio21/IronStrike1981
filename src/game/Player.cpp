@@ -1,6 +1,16 @@
 #include "Player.h"
 #include "Constants.h"
 #include <algorithm>
+#include <cmath>
+
+// =================================================================
+// POUSO DE FIM DE FASE
+// =================================================================
+static const float LANDING_DESCENT_RATE = 0.15f;  // escala por segundo (1.0 -> 0.5 em ~3.3s)
+static const float LANDING_ARRIVE_RADIUS = 12.0f; // a que distância considera que chegou
+static const float LANDING_BRAKE_RADIUS = 90.0f;  // começa a frear a partir daqui
+static const float ENGINE_SHUTDOWN_TIME = 8.1f;   // duração do engine_shutdown.ogg
+// =================================================================
 
 void Player::Initialize(Vector2 startPos)
 {
@@ -67,6 +77,12 @@ void Player::Initialize(Vector2 startPos)
     
     mgShootSound = LoadSound("assets/audio/helicopter/machine_gun.ogg");
     mgFinalShotSound = LoadSound("assets/audio/helicopter/machine_gun_final_shot.ogg");
+    engineShutdownSound = LoadSound("assets/audio/helicopter/engine_shutdown.ogg");
+
+    isLanding = false;
+    landingTarget = { 0.0f, 0.0f };
+    enginesShutDown = false;
+    rotorShutdownRate = 0.0f;
 
     if (mgShootSound.frameCount != 0) SetSoundVolume(mgShootSound, 0.5f);
     if (mgFinalShotSound.frameCount != 0) SetSoundVolume(mgFinalShotSound, 0.5f);
@@ -138,21 +154,31 @@ void Player::Update(float deltaTime)
             if (engineLoopMusic.frameCount != 0) UpdateMusicStream(engineLoopMusic);
         }
 
-        // Acelera a helice gradativamente ao longo do tempo (ganha 500 graus por segundo, a cada segundo)
-        if (currentRotorSpeed < targetRotorSpeed)
+        if (enginesShutDown)
         {
-            currentRotorSpeed += 500.0f * deltaTime; 
-            if (currentRotorSpeed > targetRotorSpeed) 
-                currentRotorSpeed = targetRotorSpeed;
+            // Motores desligados: a hélice perde força até parar, no mesmo
+            // tempo que o som de shutdown leva para terminar.
+            currentRotorSpeed -= rotorShutdownRate * deltaTime;
+            if (currentRotorSpeed < 0.0f) currentRotorSpeed = 0.0f;
         }
-
-        // Quando o motor pega forca (700 graus/s), o helicoptero "levanta voo"
-        if (currentRotorSpeed > 700.0f)
+        else
         {
-            if (scale < 1.0f)
+            // Acelera a helice gradativamente ao longo do tempo (ganha 500 graus por segundo, a cada segundo)
+            if (currentRotorSpeed < targetRotorSpeed)
             {
-                scale += 0.1f * deltaTime; // Sobe suavemente
-                if (scale > 1.0f) scale = 1.0f;
+                currentRotorSpeed += 500.0f * deltaTime;
+                if (currentRotorSpeed > targetRotorSpeed)
+                    currentRotorSpeed = targetRotorSpeed;
+            }
+
+            // Quando o motor pega forca (700 graus/s), o helicoptero "levanta voo"
+            if (currentRotorSpeed > 700.0f)
+            {
+                if (scale < 1.0f)
+                {
+                    scale += 0.1f * deltaTime; // Sobe suavemente
+                    if (scale > 1.0f) scale = 1.0f;
+                }
             }
         }
     }
@@ -161,8 +187,47 @@ void Player::Update(float deltaTime)
     rotorRotation += currentRotorSpeed * deltaTime;
     if (rotorRotation >= 360.0f) rotorRotation -= 360.0f;
 
+    if (isLanding)
+    {
+        // FIM DE FASE: o helicóptero se leva sozinho até o ponto de pouso.
+        // Reaproveita a mesma física do voo (aceleração + atrito), só que o
+        // "input" agora aponta para o alvo em vez de vir do teclado.
+        float dx = landingTarget.x - position.x;
+        float dy = landingTarget.y - position.y;
+        float dist = sqrtf(dx * dx + dy * dy);
+
+        if (dist > LANDING_ARRIVE_RADIUS)
+        {
+            // Freia proporcionalmente ao chegar perto, senão passa do ponto
+            float forca = (dist < LANDING_BRAKE_RADIUS) ? (dist / LANDING_BRAKE_RADIUS) : 1.0f;
+
+            velocity.x += (dx / dist) * acceleration * forca * deltaTime;
+            velocity.y += (dy / dist) * acceleration * forca * deltaTime;
+        }
+        else if (scale > 0.5f)
+        {
+            // Chegou em cima do ponto: desce até encostar no chão
+            scale -= LANDING_DESCENT_RATE * deltaTime;
+
+            if (scale <= 0.5f)
+            {
+                scale = 0.5f;
+
+                // Tocou o chão: desliga os motores. A hélice desacelera no
+                // mesmo tempo do som, partindo da rotação atual.
+                if (!enginesShutDown)
+                {
+                    enginesShutDown = true;
+                    rotorShutdownRate = currentRotorSpeed / ENGINE_SHUTDOWN_TIME;
+
+                    if (engineLoopMusic.frameCount != 0) StopMusicStream(engineLoopMusic);
+                    if (engineShutdownSound.frameCount != 0) PlaySound(engineShutdownSound);
+                }
+            }
+        }
+    }
     // O jogador so pode se mover quando o helicoptero terminar a decolagem (escala = 1.0)
-    if (scale >= 1.0f)
+    else if (scale >= 1.0f)
     {
         Vector2 input = {0.0f, 0.0f};
 
@@ -192,8 +257,8 @@ void Player::Update(float deltaTime)
     if (position.y < margin) position.y = margin;
     if (position.y > Config::SCREEN_HEIGHT - margin) position.y = Config::SCREEN_HEIGHT - margin;
 
-    // LOGICA DA METRALHADORA (So atira se o motor ja ligou)
-    if (scale >= 1.0f) 
+    // LOGICA DA METRALHADORA (So atira se o motor ja ligou e nao esta pousando)
+    if (scale >= 1.0f && !isLanding)  
     {
         isShooting = (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL));
         if (isShooting && hasMachineGun)
@@ -395,8 +460,23 @@ void Player::Unload()
     if (engineStartingSound.frameCount != 0) { UnloadSound(engineStartingSound); engineStartingSound = {}; }
     if (mgShootSound.frameCount != 0) { UnloadSound(mgShootSound); mgShootSound = {}; }
     if (mgFinalShotSound.frameCount != 0) { UnloadSound(mgFinalShotSound); mgFinalShotSound = {}; }
+    if (engineShutdownSound.frameCount != 0) { UnloadSound(engineShutdownSound); engineShutdownSound = {}; }
     if (engineLoopMusic.frameCount != 0) { UnloadMusicStream(engineLoopMusic); engineLoopMusic = {}; }
     engineLoopActive = false;
 
     bullets.clear();
+}
+
+void Player::StartLanding(Vector2 landingPos)
+{
+    // Já pousando, caindo destruído ou ainda no chão: não há o que fazer
+    if (isLanding || isDestroyed || !IsAirborne()) return;
+
+    isLanding = true;
+    landingTarget = landingPos;
+
+    // Solta os controles: a partir daqui quem pilota é o jogo
+    isShooting = false;
+    wasShooting = false;
+    mgCurrentFrame = 0;
 }

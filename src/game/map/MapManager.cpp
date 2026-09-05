@@ -74,6 +74,7 @@ bool MapManager::Load(const std::string& jsonFilePath)
     pendingSpawns.clear();
     objects.clear();
     hasPlayerStart = false;
+    hasPlayerFinish = false;
 
     for (const auto& layer : j["layers"]) {
         if (layer["type"] == "tilelayer") {
@@ -164,11 +165,17 @@ bool MapManager::Load(const std::string& jsonFilePath)
                         spawn.type = "Tank"; // fallback
                     }
 
-                    // Ponto de partida do helicóptero. É só uma marcação de
-                    // lugar, não gera inimigo nenhum.
-                    if (spawn.type == "PlayerPosition") {
+                    // Pontos de partida e de pouso do helicóptero. São só
+                    // marcações de lugar, não geram inimigo nenhum.
+                    if (spawn.type == "PlayerStartPosition") {
                         playerStart = { spawn.x, spawn.y };
                         hasPlayerStart = true;
+                        continue;
+                    }
+
+                    if (spawn.type == "PlayerFinishPosition") {
+                        playerFinish = { spawn.x, spawn.y };
+                        hasPlayerFinish = true;
                         continue;
                     }
                     

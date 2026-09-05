@@ -86,9 +86,16 @@ public:
     int GetTileWidth() const { return tileWidth; }
     float GetScrollY() const { return scrollY; }
 
-    // Objeto "PlayerPosition" do mapa: onde o helicóptero começa (mundo)
+    // Objetos "PlayerStartPosition" e "PlayerFinishPosition" do mapa,
+    // em coordenadas de mundo
     bool HasPlayerStart() const { return hasPlayerStart; }
     Vector2 GetPlayerStart() const { return playerStart; }
+
+    bool HasPlayerFinish() const { return hasPlayerFinish; }
+    Vector2 GetPlayerFinish() const { return playerFinish; }
+
+    // O mapa chegou ao fim: não há mais para onde rolar
+    bool IsAtEnd() const { return isLoaded && scrollY <= 0.0f; }
 
     // --- Construções destrutíveis ---
     // O índice é a posição na lista interna de tile objects e vale enquanto o
@@ -110,6 +117,9 @@ private:
 
     Vector2 playerStart = { 0.0f, 0.0f };
     bool hasPlayerStart = false;
+
+    Vector2 playerFinish = { 0.0f, 0.0f };
+    bool hasPlayerFinish = false;
 
     bool isLoaded;
     int mapWidth;    

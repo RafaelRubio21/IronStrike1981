@@ -25,6 +25,14 @@ public:
     // Decolagem concluída: já pode voar, atirar e o mapa já pode rolar.
     // É a mesma condição que libera o controle do jogador.
     bool IsAirborne() const { return scale >= 1.0f; }
+
+    // Fim de fase: tira o controle do jogador e leva o helicóptero até o
+    // ponto de pouso, onde ele desce e desliga os motores.
+    void StartLanding(Vector2 landingPos);
+    bool IsLanding() const { return isLanding; }
+
+    // Pousou e as hélices já pararam por completo
+    bool HasShutDown() const { return enginesShutDown && currentRotorSpeed <= 0.0f; }
     
     int hp;
     float hitTimer;
@@ -72,4 +80,11 @@ private:
     Sound mgShootSound;
     Sound mgFinalShotSound;
     bool wasShooting;
+
+    // Pouso de fim de fase
+    bool isLanding;
+    Vector2 landingTarget;
+    bool enginesShutDown;      // já tocou o shutdown e a hélice está parando
+    float rotorShutdownRate;   // graus/s² para casar a parada com o som
+    Sound engineShutdownSound;
 };
