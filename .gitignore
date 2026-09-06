@@ -1,10 +1,15 @@
-﻿# Build and IDE
+# Build
 build/
 out/
-.vs/
-.vscode/
-*.user
-*.suo
+cmake-build-*/
 CMakeSettings.json
 CMakeCache.txt
 CMakeFiles/
+compile_commands.json
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo

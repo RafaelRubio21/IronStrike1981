@@ -52,6 +52,7 @@ void Player::Initialize(Vector2 startPos)
     mgOffsetY = -114.0f; // Ajuste fino pro bico do helicoptero
 
     bullets.clear();
+    bulletTravel = 0.0f;
     bulletSpeed = 1200.0f; // Velocidade da bolinha
     mgFireRate = 0.08f;    // O intervalo entre um tiro e outro (quanto menor, mais rapido atira)
 
@@ -75,7 +76,9 @@ void Player::Initialize(Vector2 startPos)
     // Carrega os sons da arma
     wasShooting = false;
     
-    mgShootSound = LoadSound("assets/audio/helicopter/machine_gun.ogg");
+    // 6 vozes: a cadencia e de um tiro a cada 0.08s, e um Sound sozinho
+    // reiniciava o proprio buffer antes de terminar de soar.
+    mgShootSound.Load("assets/audio/helicopter/machine_gun.ogg", 6);
     mgFinalShotSound = LoadSound("assets/audio/helicopter/machine_gun_final_shot.ogg");
     engineShutdownSound = LoadSound("assets/audio/helicopter/engine_shutdown.ogg");
 
@@ -84,7 +87,6 @@ void Player::Initialize(Vector2 startPos)
     enginesShutDown = false;
     rotorShutdownRate = 0.0f;
 
-    if (mgShootSound.frameCount != 0) SetSoundVolume(mgShootSound, 0.5f);
     if (mgFinalShotSound.frameCount != 0) SetSoundVolume(mgFinalShotSound, 0.5f);
 
     // O timer vai segurar a inicializacao do motor por meio segundo (0.5f)
@@ -94,9 +96,10 @@ void Player::Initialize(Vector2 startPos)
 void Player::Update(float deltaTime)
 {
     // Atualiza a posicao de todos os tiros criados
+    bulletTravel = bulletSpeed * deltaTime;
     for (auto& b : bullets)
     {
-        b.y -= bulletSpeed * deltaTime; // Tiro sobe a tela
+        b.y -= bulletTravel; // Tiro sobe a tela
     }
 
     // Apaga da memoria os tiros que sairam da tela por cima
@@ -279,7 +282,7 @@ void Player::Update(float deltaTime)
                 bullets.push_back({ position.x, position.y + (mgOffsetY * scale) });
                 
                 // Dispara o som a cada bala criada!
-                if (mgShootSound.frameCount != 0) PlaySound(mgShootSound);
+                mgShootSound.Play(0.5f);
             }
         }
         else
@@ -306,8 +309,11 @@ bool Player::CheckBulletHits(Rectangle targetRect)
 {
     for (auto it = bullets.begin(); it != bullets.end(); ++it)
     {
-        // A bala é um projetil fino e alto. Criamos uma hitbox para ela
-        Rectangle bulletRect = { it->x - 2.0f, it->y - 15.0f, 4.0f, 15.0f };
+        // A bala é um projetil fino e alto. A caixa vai da ponta dela (topo)
+        // até onde ela ESTAVA no frame anterior: a 1200 px/s ela anda 20 px por
+        // quadro a 60 FPS, e uma caixa só de 15 px deixava buraco entre um
+        // frame e outro — num tranco de FPS o tiro atravessava o alvo.
+        Rectangle bulletRect = { it->x - 2.0f, it->y - 15.0f, 4.0f, 15.0f + bulletTravel };
 
         if (CheckCollisionRecs(bulletRect, targetRect))
         {
@@ -458,7 +464,7 @@ void Player::Unload()
     hasMachineGun = false;
 
     if (engineStartingSound.frameCount != 0) { UnloadSound(engineStartingSound); engineStartingSound = {}; }
-    if (mgShootSound.frameCount != 0) { UnloadSound(mgShootSound); mgShootSound = {}; }
+    mgShootSound.Unload();
     if (mgFinalShotSound.frameCount != 0) { UnloadSound(mgFinalShotSound); mgFinalShotSound = {}; }
     if (engineShutdownSound.frameCount != 0) { UnloadSound(engineShutdownSound); engineShutdownSound = {}; }
     if (engineLoopMusic.frameCount != 0) { UnloadMusicStream(engineLoopMusic); engineLoopMusic = {}; }

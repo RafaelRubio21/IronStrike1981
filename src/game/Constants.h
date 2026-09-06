@@ -11,4 +11,8 @@ namespace Config
 
     // Folga fora da tela antes de um objeto ser descartado
     constexpr float CULL_MARGIN = 300.0f;
+
+    // Teto do deltaTime, em segundos (50 ms = 20 FPS). Segura o passo de
+    // simulação quando o jogo engasga, para nada teleportar num único quadro.
+    constexpr float MAX_DELTA_TIME = 0.05f;
 }

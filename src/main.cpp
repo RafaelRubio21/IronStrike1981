@@ -24,7 +24,15 @@ int main()
 
         while (!WindowShouldClose())
         {
-            game.Update(GetFrameTime());
+            // Um travamento (janela arrastada, disco lento, troca de app)
+            // devolve um deltaTime enorme. Como TODO movimento aqui é v*dt,
+            // um quadro desses teleportaria os tanques para fora da rota e
+            // faria a bala pular por cima do alvo. Preso em 20 FPS: se o jogo
+            // engasgar, ele fica lento em vez de dar salto.
+            float deltaTime = GetFrameTime();
+            if (deltaTime > Config::MAX_DELTA_TIME) deltaTime = Config::MAX_DELTA_TIME;
+
+            game.Update(deltaTime);
             game.Render();
         }
 

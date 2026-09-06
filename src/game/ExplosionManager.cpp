@@ -42,23 +42,32 @@ void ExplosionManager::Initialize()
             }
         }
 
+        soundOwner[t] = -1;
         if (cfg.soundPath == nullptr) continue;
 
-        // Dois tipos podem usar o mesmo arquivo de som: carrega uma vez só e
-        // compartilha o handle, senão o mesmo .ogg ficaria duplicado na memória.
+        // Dois tipos podem usar o mesmo arquivo de som: nesse caso o segundo
+        // aponta para o pool do primeiro, senão o mesmo .ogg ficaria duplicado.
         int fonte = -1;
         for (int k = 0; k < t; k++)
         {
             if (EXPLOSION_CONFIGS[k].soundPath != nullptr &&
                 strcmp(EXPLOSION_CONFIGS[k].soundPath, cfg.soundPath) == 0)
             {
-                fonte = k;
+                fonte = soundOwner[k];
                 break;
             }
         }
 
-        sounds[t] = (fonte >= 0) ? sounds[fonte]
-                                 : LoadSound(TextFormat("assets/audio/%s", cfg.soundPath));
+        if (fonte >= 0)
+        {
+            soundOwner[t] = fonte;
+        }
+        else
+        {
+            // 4 vozes: várias explosões podem estourar no mesmo instante
+            soundPools[t].Load(TextFormat("assets/audio/%s", cfg.soundPath), 4);
+            soundOwner[t] = t;
+        }
     }
 
     isLoaded = true;
@@ -79,13 +88,10 @@ void ExplosionManager::Spawn(Vector2 position, ExplosionType type, float scale)
 
     explosions.push_back(ex);
 
-    // O volume é ajustado na hora de tocar, e não no carregamento, porque dois
-    // tipos podem dividir o mesmo Sound com volumes diferentes.
-    if (sounds[t].frameCount != 0)
-    {
-        SetSoundVolume(sounds[t], EXPLOSION_CONFIGS[t].volume);
-        PlaySound(sounds[t]);
-    }
+    // O volume vai na hora de tocar, e não no carregamento, porque dois tipos
+    // podem dividir o mesmo pool com volumes diferentes.
+    const int owner = soundOwner[t];
+    if (owner >= 0) soundPools[owner].Play(EXPLOSION_CONFIGS[t].volume);
 }
 
 void ExplosionManager::Update(float deltaTime, float scrollSpeed)
@@ -147,19 +153,11 @@ void ExplosionManager::Unload()
         }
     }
 
-    // Tipos que compartilham o mesmo arquivo compartilham o handle: descarrega
-    // uma vez e zera todos os slots que apontavam para ele.
+    // Só quem é dono carregou de verdade; nos demais o Unload é inofensivo.
     for (int t = 0; t < EXPLOSION_TYPE_COUNT; t++)
     {
-        if (sounds[t].frameCount == 0) continue;
-
-        Sound s = sounds[t];
-        UnloadSound(s);
-
-        for (int k = t; k < EXPLOSION_TYPE_COUNT; k++)
-        {
-            if (sounds[k].stream.buffer == s.stream.buffer) sounds[k] = {};
-        }
+        soundPools[t].Unload();
+        soundOwner[t] = -1;
     }
 
     isLoaded = false;

@@ -50,7 +50,7 @@ void EnemyBullet::Render() const
     if (active)
     {
         // Centro da Bala (Plasma/Fogo incandescente)
-        DrawCircleV(position, 7.0f, { 255, 50, 0, 255 }); // Borda laranja escuro
+        DrawCircleV(position, RADIUS, { 255, 50, 0, 255 }); // Borda laranja escuro
         DrawCircleV(position, 4.0f, ORANGE);              // Laranja
         DrawCircleV(position, 2.0f, WHITE);               // Centro quente
     }

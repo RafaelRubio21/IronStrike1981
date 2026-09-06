@@ -376,7 +376,7 @@ void MapManager::DrawObjects(float offsetX, float offsetY, Color tint) const
     const float screenHeight = (float)Config::SCREEN_HEIGHT;
 
     for (const auto& mo : objects) {
-        Texture2D tex = { 0 };
+        Texture2D tex = {};
         Rectangle source = { 0.0f, 0.0f, 0.0f, 0.0f };
         bool usandoRuina = false;
 

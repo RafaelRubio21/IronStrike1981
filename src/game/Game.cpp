@@ -7,17 +7,9 @@
 
 void Game::Initialize()
 {
-    // A camera 2D fica parada no 0,0 por enquanto
-    camera = { 0 };
-    camera.target = Vector2{ 0.0f, 0.0f };
-    camera.offset = Vector2{ 0.0f, 0.0f };
-    camera.rotation = 0.0f;
-    camera.zoom = 1.0f;
-
     enemies.clear();
     explosionManager.Clear();
     enemyBullets.clear();
-    tankSpawnTimer = 0.0f;
 
     mapManager.Load("assets/maps/level1.json");
 
@@ -51,10 +43,11 @@ void Game::Initialize()
         PlayMusicStream(bgMusic);
     }
     
-    // Carrega os Sons de Impacto Metálico
+    // Carrega os Sons de Impacto Metálico. 3 vozes cada: a metralhadora
+    // acerta rápido demais para um som só dar conta.
     for (int i = 0; i < IMPACT_SOUND_COUNT; i++)
     {
-        impactSounds[i] = LoadSound(TextFormat("assets/audio/metal_impact/impact%d.ogg", i + 1));
+        impactSounds[i].Load(TextFormat("assets/audio/metal_impact/impact%d.ogg", i + 1), 3);
     }
     
     explosionManager.Initialize();
@@ -220,11 +213,6 @@ void Game::Update(float deltaTime)
             enemyBullets.push_back(bullet);
         }
 
-        if (e->isDestroyed)
-        {
-            e->hitTimer -= deltaTime;
-        }
-
         // Só tenta matar o tanque se ele já não estiver destruído
         if (!e->isDestroyed)
         {
@@ -245,13 +233,8 @@ void Game::Update(float deltaTime)
                 }
                 else
                 {
-                    // Escolhe 1 dos 5 sons de impacto aleatoriamente (só se não explodiu)
-                    int randSfx = GetRandomValue(0, IMPACT_SOUND_COUNT - 1);
-                    if (impactSounds[randSfx].frameCount != 0)
-                    {
-                        SetSoundVolume(impactSounds[randSfx], 0.7f);
-                        PlaySound(impactSounds[randSfx]);
-                    }
+                    // Só faz barulho de metal se o tanque aguentou o tiro
+                    PlayImpactSound();
                 }
             }
         }
@@ -288,12 +271,7 @@ void Game::Update(float deltaTime)
             }
             else
             {
-                int randSfx = GetRandomValue(0, IMPACT_SOUND_COUNT - 1);
-                if (impactSounds[randSfx].frameCount != 0)
-                {
-                    SetSoundVolume(impactSounds[randSfx], 0.7f);
-                    PlaySound(impactSounds[randSfx]);
-                }
+                PlayImpactSound();
             }
         }
     }
@@ -308,7 +286,10 @@ void Game::Update(float deltaTime)
         b.Update(deltaTime);
 
         // Colisão com o Jogador
-        if (b.active && !player.isDestroyed && CheckCollisionPointRec(b.position, player.GetHitbox()))
+        // Círculo, e não ponto: a bala é desenhada com 7 px de raio, então o
+        // ponto matemático deixava passar tiros que visivelmente encostaram.
+        if (b.active && !player.isDestroyed &&
+            CheckCollisionCircleRec(b.position, EnemyBullet::RADIUS, player.GetHitbox()))
         {
             player.TakeDamage(20); // Bala de tanque arranca 20 de vida
             b.OnHit();
@@ -351,11 +332,6 @@ void Game::Render()
         // Desenha a sombra de todos os inimigos
         for (const auto& e : enemies) e->DrawShadows();
     EndTextureMode();
-
-    BeginMode2D(camera);
-        // Quando criarmos as tilesets (chao e agua), desenhamos elas aqui embaixo!
-        for (const auto& e : enemies) e->DrawGroundEffects();
-    EndMode2D();
 
     // ETAPA 3: CARIMBA AS SOMBRAS DO CHÃO
     StampShadows();
@@ -402,6 +378,12 @@ void Game::Render()
 }
 
 
+void Game::PlayImpactSound()
+{
+    const int randSfx = GetRandomValue(0, IMPACT_SOUND_COUNT - 1);
+    impactSounds[randSfx].Play(0.7f);
+}
+
 void Game::StampShadows()
 {
     // O height negativo no source inverte a textura: render target do OpenGL
@@ -422,10 +404,7 @@ void Game::Shutdown()
 
     if (bgMusic.frameCount != 0) UnloadMusicStream(bgMusic);
 
-    for (int i = 0; i < IMPACT_SOUND_COUNT; i++)
-    {
-        if (impactSounds[i].frameCount != 0) UnloadSound(impactSounds[i]);
-    }
+    for (int i = 0; i < IMPACT_SOUND_COUNT; i++) impactSounds[i].Unload();
 
     UnloadRenderTexture(globalShadowTarget);
 

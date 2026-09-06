@@ -1,4 +1,5 @@
 #include "Tank.h"
+#include "SoundPool.h"
 #include <cmath>
 
 // Reduz uma diferença de ângulo para a faixa -180..180, ou seja, o menor
@@ -26,15 +27,22 @@ static float TANK_ALIGN_TOLERANCE = 6.0f;
 // =================================================================
 
 // Suporte para 2 modelos de tanque (0 = Normal, 1 = Pesado)
-static Texture2D tankFrames[2][4] = {0};
-static Texture2D tankDestroyedFrame[2] = {0};
-static Texture2D cannonFrames[2][3] = {0};
-static Texture2D cannonDestroyedFrame[2] = {0};
-static Texture2D fireFrames[2][3] = {0};
+static Texture2D tankFrames[2][4] = {};
+static Texture2D tankDestroyedFrame[2] = {};
+static Texture2D cannonFrames[2][3] = {};
+static Texture2D cannonDestroyedFrame[2] = {};
+static Texture2D fireFrames[2][3] = {};
 static bool tankTexturesLoaded = false;
 
-static Sound tankMovingSnd = {0};
-static Sound tankShootingSnd = {0};
+// Modelo sem pasta de arte própria empresta as texturas do tipo 0. Sem isso
+// ele nascia INVISÍVEL e mesmo assim andava, atirava e matava. Quem empresta
+// não é dono dos handles, então o Unload precisa pular esses slots.
+static bool tankTypeBorrowsArt[2] = { false, false };
+
+// O tiro é o único som que vários tanques disparam ao mesmo tempo; o do motor
+// é uma ambiência única compartilhada por todos, de propósito.
+static SoundPool tankShootingSnd;
+static Sound tankMovingSnd = {};
 static bool tankAudioLoaded = false;
 
 void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::vector<Vector2> path, Rectangle patrolArea, EnemyStats mapStats)
@@ -166,6 +174,25 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::v
                 fireFrames[t][f] = LoadTexture(TextFormat("assets/sprites/enemies/%sfire%d.png", folder, f + 1));
             }
             cannonDestroyedFrame[t] = LoadTexture(TextFormat("assets/sprites/enemies/%sturret_destroyed.png", folder));
+
+            // Pasta ausente (é o caso de tank_heavy/ hoje): cai na arte do
+            // tipo 0 em vez de virar um tanque invisível.
+            if (t > 0 && tankFrames[t][0].id == 0)
+            {
+                TraceLog(LOG_WARNING, "Tanque tipo %d sem arte em '%s': usando a do tipo 0.", t, folder);
+
+                for (int f = 0; f < 4; f++) tankFrames[t][f] = tankFrames[0][f];
+                tankDestroyedFrame[t] = tankDestroyedFrame[0];
+
+                for (int f = 0; f < 3; f++)
+                {
+                    cannonFrames[t][f] = cannonFrames[0][f];
+                    fireFrames[t][f] = fireFrames[0][f];
+                }
+                cannonDestroyedFrame[t] = cannonDestroyedFrame[0];
+
+                tankTypeBorrowsArt[t] = true;
+            }
         }
         tankTexturesLoaded = true;
     }
@@ -173,12 +200,13 @@ void Tank::Initialize(Vector2 startPos, int spawnDirection, int tankType, std::v
     if (!tankAudioLoaded)
     {
         tankMovingSnd = LoadSound("assets/audio/tank/moving.ogg");
-        tankShootingSnd = LoadSound("assets/audio/tank/shotting.ogg");
-        
+
+        // 4 vozes: até quatro tanques podem disparar junto sem se cortarem
+        tankShootingSnd.Load("assets/audio/tank/shotting.ogg", 4);
+
         // Mantém os sons mais baixos já que os tanques estão lá embaixo no mapa
-        if (tankMovingSnd.frameCount != 0) SetSoundVolume(tankMovingSnd, TANK_VOL_ENGINE); 
-        if (tankShootingSnd.frameCount != 0) SetSoundVolume(tankShootingSnd, TANK_VOL_SHOOTING);
-        
+        if (tankMovingSnd.frameCount != 0) SetSoundVolume(tankMovingSnd, TANK_VOL_ENGINE);
+
         tankAudioLoaded = true;
     }
 }
@@ -206,17 +234,30 @@ void Tank::UnloadSharedAssets()
     {
         for (int t = 0; t < 2; t++)
         {
+            // Modelo que pegou a arte emprestada só zera os handles: quem
+            // descarrega de verdade é o dono deles (o tipo 0).
+            const bool dono = !tankTypeBorrowsArt[t];
+
             for (int f = 0; f < 4; f++)
             {
-                if (tankFrames[t][f].id != 0) { UnloadTexture(tankFrames[t][f]); tankFrames[t][f].id = 0; }
+                if (dono && tankFrames[t][f].id != 0) UnloadTexture(tankFrames[t][f]);
+                tankFrames[t][f] = {};
             }
             for (int f = 0; f < 3; f++)
             {
-                if (cannonFrames[t][f].id != 0) { UnloadTexture(cannonFrames[t][f]); cannonFrames[t][f].id = 0; }
-                if (fireFrames[t][f].id != 0) { UnloadTexture(fireFrames[t][f]); fireFrames[t][f].id = 0; }
+                if (dono && cannonFrames[t][f].id != 0) UnloadTexture(cannonFrames[t][f]);
+                cannonFrames[t][f] = {};
+
+                if (dono && fireFrames[t][f].id != 0) UnloadTexture(fireFrames[t][f]);
+                fireFrames[t][f] = {};
             }
-            if (tankDestroyedFrame[t].id != 0) { UnloadTexture(tankDestroyedFrame[t]); tankDestroyedFrame[t].id = 0; }
-            if (cannonDestroyedFrame[t].id != 0) { UnloadTexture(cannonDestroyedFrame[t]); cannonDestroyedFrame[t].id = 0; }
+            if (dono && tankDestroyedFrame[t].id != 0) UnloadTexture(tankDestroyedFrame[t]);
+            tankDestroyedFrame[t] = {};
+
+            if (dono && cannonDestroyedFrame[t].id != 0) UnloadTexture(cannonDestroyedFrame[t]);
+            cannonDestroyedFrame[t] = {};
+
+            tankTypeBorrowsArt[t] = false;
         }
         tankTexturesLoaded = false;
     }
@@ -224,7 +265,7 @@ void Tank::UnloadSharedAssets()
     if (tankAudioLoaded)
     {
         if (tankMovingSnd.frameCount != 0) { UnloadSound(tankMovingSnd); tankMovingSnd = {}; }
-        if (tankShootingSnd.frameCount != 0) { UnloadSound(tankShootingSnd); tankShootingSnd = {}; }
+        tankShootingSnd.Unload();
         tankAudioLoaded = false;
     }
 }
@@ -423,7 +464,7 @@ void Tank::Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, floa
                     cannonAnimTimer = 0.0f;
                     shootCooldown = (float)GetRandomValue(30, 60) / 10.0f; // Proximo tiro em 3s a 6s
                     
-                    if (tankShootingSnd.frameCount != 0) PlaySound(tankShootingSnd);
+                    tankShootingSnd.Play(TANK_VOL_SHOOTING);
                 }
             }
         }

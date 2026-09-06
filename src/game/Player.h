@@ -1,6 +1,7 @@
 #pragma once
 
 #include "raylib.h"
+#include "SoundPool.h"
 #include <vector>
 
 class Player
@@ -64,6 +65,10 @@ private:
     std::vector<Vector2> bullets; // Municao ativa na tela
     float bulletSpeed;
     float mgFireRate; // Frequencia dos tiros (em segundos)
+
+    // Quanto a bala andou no ultimo frame. A hitbox dela cobre esse trecho
+    // inteiro, senao num quadro lento ela pula por cima do alvo.
+    float bulletTravel;
     
     float rotorRotation; // Angulo atual de giro em graus
     float currentRotorSpeed; // Velocidade atual de giro
@@ -77,7 +82,7 @@ private:
     bool engineLoopActive;
     float engineStartDelayTimer;
     
-    Sound mgShootSound;
+    SoundPool mgShootSound; // varias vozes: 12 tiros por segundo se cortavam
     Sound mgFinalShotSound;
     bool wasShooting;
 

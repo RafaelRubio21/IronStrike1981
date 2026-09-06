@@ -22,7 +22,6 @@ public:
     virtual void Update(float deltaTime, Vector2 playerPos, bool playerDestroyed, float scrollSpeed = 0.0f) = 0;
     virtual void DrawShadows() const = 0;
     virtual void DrawBody() const = 0;
-    virtual void DrawGroundEffects() const {} // Rastros, esteiras d'água, etc.
     
     virtual Rectangle GetHitbox() const 
     {

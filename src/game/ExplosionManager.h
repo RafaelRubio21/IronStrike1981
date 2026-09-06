@@ -1,5 +1,6 @@
 #pragma once
 #include "raylib.h"
+#include "SoundPool.h"
 #include <vector>
 
 // Cada tipo é um efeito completo: animação, duração e som.
@@ -45,9 +46,12 @@ private:
     // Matriz de texturas: [ID da Explosão][Frame]
     Texture2D expFrames[EXPLOSION_TYPE_COUNT][EXPLOSION_MAX_FRAMES] = {};
 
-    // Um som por tipo. Tipos diferentes podem apontar para o mesmo arquivo:
-    // nesse caso ele é carregado uma vez só e o handle é compartilhado.
-    Sound sounds[EXPLOSION_TYPE_COUNT] = {};
+    // Um pool de vozes por tipo, para explosões simultâneas não se cortarem.
+    // Tipos diferentes podem apontar para o mesmo arquivo: nesse caso ele é
+    // carregado uma vez só e os dois dividem o mesmo pool. soundOwner[t] diz
+    // qual pool toca o som do tipo t; -1 é tipo mudo.
+    SoundPool soundPools[EXPLOSION_TYPE_COUNT];
+    int soundOwner[EXPLOSION_TYPE_COUNT] = {};
 
     bool isLoaded = false;
 };
