@@ -5,7 +5,7 @@
 
 using json = nlohmann::json;
 
-MapManager::MapManager() : isLoaded(false), scrollY(0.0f) {}
+MapManager::MapManager() : isLoaded(false), scrollY(0.0f), scrollYInicial(0.0f) {}
 
 MapManager::~MapManager() {
     Unload();
@@ -244,6 +244,7 @@ bool MapManager::Load(const std::string& jsonFilePath)
 
     isLoaded = true;
     scrollY = (float)(mapHeight * tileHeight) - (float)Config::SCREEN_HEIGHT;
+    scrollYInicial = scrollY;
     return true;
 }
 

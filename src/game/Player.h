@@ -36,9 +36,14 @@ public:
     bool HasShutDown() const { return enginesShutDown && currentRotorSpeed <= 0.0f; }
     
     int hp;
+    int maxHp; // vida no Initialize(); é a referência 100% da barra do HUD
     float hitTimer;
     bool isDestroyed;
     bool justHitGround;
+
+    // Fração de vida restante, de 0.0 a 1.0. Usa maxHp e não um valor fixo
+    // porque o hp inicial pode mudar (é um valor de teste hoje).
+    float GetHpRatio() const { return (maxHp > 0) ? ((float)hp / (float)maxHp) : 0.0f; }
 
 private:
     Vector2 position;

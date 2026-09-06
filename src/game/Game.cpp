@@ -10,6 +10,7 @@ void Game::Initialize()
     enemies.clear();
     explosionManager.Clear();
     enemyBullets.clear();
+    score = 0;
 
     mapManager.Load("assets/maps/level1.json");
 
@@ -229,6 +230,7 @@ void Game::Update(float deltaTime)
                 // Se esse tiro acabou de destruir o tanque
                 if (e->hp <= 0 && e->isDestroyed)
                 {
+                    score += 100; // Tanque destruído
                     explosionManager.Spawn(e->position, ExplosionType::TYPE_3, 1.0f);
                 }
                 else
@@ -267,6 +269,7 @@ void Game::Update(float deltaTime)
             if (mapManager.DamageObject(i, 1))
             {
                 // Só o tiro que derrubou entra aqui
+                score += 50; // Construção derrubada
                 explosionManager.Spawn(centro, ExplosionType::TYPE_0, 2.0f);
             }
             else
@@ -370,6 +373,7 @@ void Game::Render()
     explosionManager.Render();
 
     // UI
+    RenderHUD();
     DrawFPS(10, 10);
 
     EndDrawing();
@@ -382,6 +386,39 @@ void Game::PlayImpactSound()
 {
     const int randSfx = GetRandomValue(0, IMPACT_SOUND_COUNT - 1);
     impactSounds[randSfx].Play(0.7f);
+}
+
+// Cores do HUD: quanto menos vida sobra, mais a barra pende pro vermelho.
+static Color HpBarColor(float ratio)
+{
+    if (ratio > 0.5f) return GREEN;
+    if (ratio > 0.25f) return YELLOW;
+    return RED;
+}
+
+void Game::RenderHUD() const
+{
+    // --- Barra de vida, canto superior esquerdo (abaixo do contador de FPS,
+    // que o raylib desenha nos primeiros ~30px com DrawFPS) ---
+    const float hpBarX = 10.0f, hpBarY = 55.0f, hpBarW = 200.0f, hpBarH = 20.0f;
+    const float hpRatio = player.GetHpRatio();
+
+    DrawRectangle((int)hpBarX, (int)hpBarY, (int)hpBarW, (int)hpBarH, DARKGRAY);
+    DrawRectangle((int)hpBarX, (int)hpBarY, (int)(hpBarW * hpRatio), (int)hpBarH, HpBarColor(hpRatio));
+    DrawRectangleLines((int)hpBarX, (int)hpBarY, (int)hpBarW, (int)hpBarH, WHITE);
+    DrawText("VIDA", (int)hpBarX, (int)(hpBarY - 18.0f), 16, WHITE);
+
+    // --- Pontuação, canto superior direito ---
+    const char* scoreText = TextFormat("PONTOS: %d", score);
+    const int scoreFontSize = 20;
+    const int scoreWidth = MeasureText(scoreText, scoreFontSize);
+    DrawText(scoreText, Config::SCREEN_WIDTH - scoreWidth - 10, 10, scoreFontSize, WHITE);
+
+    // --- Progresso da fase, barra fina no topo da tela ---
+    const float progress = mapManager.GetProgress();
+    const float progressBarY = 0.0f, progressBarH = 6.0f;
+    DrawRectangle(0, (int)progressBarY, Config::SCREEN_WIDTH, (int)progressBarH, DARKGRAY);
+    DrawRectangle(0, (int)progressBarY, (int)(Config::SCREEN_WIDTH * progress), (int)progressBarH, SKYBLUE);
 }
 
 void Game::StampShadows()

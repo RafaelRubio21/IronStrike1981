@@ -266,6 +266,27 @@ Para criar um efeito novo, é só acrescentar uma linha na tabela.
 | `TYPE_2` | faísca de bala na blindagem | FireElement1 (7f) | — (o impacto metálico é do `Game`) |
 | `TYPE_3` | tanque explodindo | Explosion0 (10f) | tank/exploding |
 
+### 5.6 HUD (`Game::RenderHUD()`)
+
+Desenhado por cima de tudo, na última etapa do `Render()`, depois de `DrawFPS`
+(que ocupa os primeiros ~30 px do canto superior esquerdo — a barra de vida
+começa em y=55 de propósito, pra não sobrepor o contador). Três elementos, sem
+estado próprio: leem `player`/`mapManager`/`score` a cada frame.
+
+- **Vida**: barra proporcional a `Player::GetHpRatio()` (`hp / maxHp`). `maxHp`
+  é guardado no `Initialize()` do player, não é uma constante, porque o `hp`
+  inicial ainda é o valor de teste (100000) — quando ele virar um número real
+  a barra continua funcionando sem mudança nenhuma. Cor muda de verde para
+  amarelo (≤50%) e vermelho (≤25%).
+- **Pontuação**: `Game::score`, um `int` simples somado direto onde o dano
+  acontece — +100 quando um tanque morre (`Tank::hp <= 0 && isDestroyed`), +50
+  quando `MapManager::DamageObject` derruba uma construção. Não sobrevive a um
+  `Initialize()` novo (zera de propósito).
+- **Progresso da fase**: barra fina no topo, de `MapManager::GetProgress()`.
+  Usa o `scrollY` inicial (guardado em `scrollYInicial` no `Load()`) como
+  referência: `1 - scrollY/scrollYInicial`. Mapa mais curto que a tela
+  (`scrollYInicial <= 0`) devolve 1.0 — já "chegou".
+
 ---
 
 ## 6. Assets
@@ -323,7 +344,7 @@ viraram `Game::PlayImpactSound()`.
 - **`hp = 100000` no player** ([Player.cpp:26](src/game/Player.cpp:26)). É valor de
   teste e deixa o jogador praticamente imortal, mas baixar isso muda a
   dificuldade do jogo — é chamada sua, não faxina. Balas de tanque tiram 20.
-- **Sem estados de jogo** (menu, game over, vitória, reinício) e **sem HUD**.
+- **Sem estados de jogo** (menu, game over, vitória, reinício).
   `Player::HasShutDown()` existe para sinalizar "pousou e as hélices pararam" e
   continua sem chamador: o fim de fase termina com o helicóptero parado na tela.
 - **Só um inimigo na fase 1.** A infraestrutura de spawn e patrulha aguenta muito

@@ -24,6 +24,7 @@ void Player::Initialize(Vector2 startPos)
     rotorOffsetY = -28.0f; // Valor ideal definido pelo jogador
 
     hp = 100000;
+    maxHp = hp;
     hitTimer = 0.0f;
     isDestroyed = false;
     justHitGround = false;

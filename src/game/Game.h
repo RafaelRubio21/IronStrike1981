@@ -29,6 +29,9 @@ private:
     // alvo (tanque ou construção) aguenta o tranco.
     void PlayImpactSound();
 
+    // Barra de vida, pontuação e progresso da fase, por cima de tudo
+    void RenderHUD() const;
+
     Player player;
     
     std::vector<std::unique_ptr<EnemyBase>> enemies;
@@ -38,6 +41,9 @@ private:
     std::vector<EnemyBullet> enemyBullets;
 
     float scrollSpeed;
+
+    // Pontuação: soma ao destruir um tanque ou derrubar uma construção
+    int score;
     
     Music bgMusic; // Musica de Fundo
     float bgMusicVolume;

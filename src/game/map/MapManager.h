@@ -97,6 +97,15 @@ public:
     // O mapa chegou ao fim: não há mais para onde rolar
     bool IsAtEnd() const { return isLoaded && scrollY <= 0.0f; }
 
+    // Progresso da fase, de 0.0 (início) a 1.0 (fim). Serve pro HUD; usa o
+    // scrollY inicial como referência porque ele é a distância total que o
+    // mapa ainda vai rolar.
+    float GetProgress() const
+    {
+        if (!isLoaded || scrollYInicial <= 0.0f) return 1.0f;
+        return 1.0f - (scrollY / scrollYInicial);
+    }
+
     // --- Construções destrutíveis ---
     // O índice é a posição na lista interna de tile objects e vale enquanto o
     // mapa não for recarregado.
@@ -128,6 +137,7 @@ private:
     int tileHeight;  
 
     float scrollY;   
+    float scrollYInicial; // scrollY no momento do Load(), pra calcular progresso
 
     // Acha o tileset dono de um gid (o de maior firstGid que ainda cabe nele)
     const Tileset* FindTileset(int gid) const;
