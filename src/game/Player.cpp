@@ -82,6 +82,9 @@ void Player::Initialize(Vector2 startPos)
     mgShootSound.Load("assets/audio/helicopter/machine_gun.ogg", 6);
     mgFinalShotSound = LoadSound("assets/audio/helicopter/machine_gun_final_shot.ogg");
     engineShutdownSound = LoadSound("assets/audio/helicopter/engine_shutdown.ogg");
+    // Mesmo volume do motor rodando: sem isso ele tocava no volume padrão do
+    // raylib (100%), bem mais alto que o resto do áudio do helicóptero (30%).
+    if (engineShutdownSound.frameCount != 0) SetSoundVolume(engineShutdownSound, 0.3f);
 
     isLanding = false;
     landingTarget = { 0.0f, 0.0f };
