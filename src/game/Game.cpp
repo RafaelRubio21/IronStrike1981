@@ -396,8 +396,81 @@ static Color HpBarColor(float ratio)
     return RED;
 }
 
+// =====================================================================
+// PROTOTIPO DO HUD DE MUNICAO — numeros fixos de propósito.
+// Ainda não existe arma secundária, míssil nem bomba no jogo (só a
+// metralhadora infinita do Player); isto é só a prévia visual pedida antes
+// de implementar essas armas de verdade. Remover os valores fixos e ligar
+// nos sistemas reais quando eles existirem.
+// =====================================================================
+enum class ArmaTipo { Secundaria, Missil, Bomba };
+struct MunicaoSlot { ArmaTipo tipo; Color cor; int atual; int maximo; };
+
+static void DrawMunicaoSlot(float x, float y, const MunicaoSlot& slot)
+{
+    // Um ícone por arma. Sem a imagem, cai no quadradinho colorido (mesmo
+    // carregamento defensivo do resto do jogo).
+    static Texture2D iconeSecundaria = LoadTexture("assets/hud/secondary_arm.png");
+    static Texture2D iconeMissil = LoadTexture("assets/hud/missil.png");
+    static Texture2D iconeBomba = LoadTexture("assets/hud/bomb.png");
+
+    Texture2D iconeArma = {};
+    switch (slot.tipo)
+    {
+        case ArmaTipo::Secundaria: iconeArma = iconeSecundaria; break;
+        case ArmaTipo::Missil:     iconeArma = iconeMissil;     break;
+        case ArmaTipo::Bomba:      iconeArma = iconeBomba;      break;
+    }
+
+    const float escala = 0.7f;
+    const float boxSize = (iconeArma.id != 0) ? (iconeArma.width * escala) : 28.0f;
+
+    if (iconeArma.id != 0)
+    {
+        // Sem tingir: mostra a arte do ícone com as cores originais
+        DrawTextureEx(iconeArma, { x, y }, 0.0f, escala, WHITE);
+    }
+    else
+    {
+        // Sem a imagem, a cor é o que diferencia o quadradinho de
+        // placeholder de um slot do outro
+        DrawRectangle((int)x, (int)y, (int)boxSize, (int)boxSize, slot.cor);
+        DrawRectangleLines((int)x, (int)y, (int)boxSize, (int)boxSize, WHITE);
+    }
+
+    // Número, no formato atual/máximo, embaixo do ícone e centralizado nele
+    const char* texto = TextFormat("%d/%d", slot.atual, slot.maximo);
+    const int fontSize = 18;
+    const int textoWidth = MeasureText(texto, fontSize);
+    DrawText(texto, (int)(x + boxSize / 2.0f - textoWidth / 2.0f), (int)(y + boxSize), fontSize, WHITE);
+}
+
+static void RenderMunicaoMockup()
+{
+    // Canto inferior esquerdo: não disputa espaço com a área de leitura
+    // vertical (o que importa num scroller vertical é ver o que vem por cima).
+    // baseY reserva espaço pro ícone + o número que agora fica embaixo dele —
+    // se aumentar bastante a escala do ícone, precisa afastar isso do rodapé.
+    const float baseX = 10.0f;
+    const float baseY = (float)Config::SCREEN_HEIGHT - 100.0f;
+    const float espacamento = 100.0f; // dá respiro entre os 3 ícones
+
+    MunicaoSlot slots[3] = {
+        { ArmaTipo::Secundaria, YELLOW, 12, 20 },
+        { ArmaTipo::Missil,     ORANGE,  3,  6 },
+        { ArmaTipo::Bomba,      RED,     1,  3 },
+    };
+
+    for (int i = 0; i < 3; i++)
+    {
+        DrawMunicaoSlot(baseX + i * espacamento, baseY, slots[i]);
+    }
+}
+
 void Game::RenderHUD() const
 {
+    RenderMunicaoMockup(); // PROTÓTIPO — remover quando integrar de verdade
+
     // --- Barra de vida, canto superior esquerdo (abaixo do contador de FPS,
     // que o raylib desenha nos primeiros ~30px com DrawFPS) ---
     const float hpBarX = 10.0f, hpBarY = 55.0f, hpBarW = 200.0f, hpBarH = 20.0f;
