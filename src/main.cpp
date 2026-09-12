@@ -13,6 +13,18 @@ int main()
     }
 
     InitWindow(Config::SCREEN_WIDTH, Config::SCREEN_HEIGHT, "Iron Strike 1981 - 2D Arcade");
+
+    // Centraliza no monitor principal (índice 0). Sem isso, com mais de um
+    // monitor conectado o SO às vezes abre a janela num monitor secundário,
+    // ou fora de centro nele.
+    const int monitorPrincipal = 0;
+    const Vector2 monitorPos = GetMonitorPosition(monitorPrincipal);
+    const int monitorWidth = GetMonitorWidth(monitorPrincipal);
+    const int monitorHeight = GetMonitorHeight(monitorPrincipal);
+    SetWindowPosition(
+        (int)monitorPos.x + (monitorWidth - Config::SCREEN_WIDTH) / 2,
+        (int)monitorPos.y + (monitorHeight - Config::SCREEN_HEIGHT) / 2);
+
     InitAudioDevice(); // Inicia o Motor de Som (Hardware)
     SetTargetFPS(60);
 

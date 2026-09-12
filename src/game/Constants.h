@@ -6,8 +6,8 @@
 // o clamp do player e o render target de sombras.
 namespace Config
 {
-    constexpr int SCREEN_WIDTH  = 1024;
-    constexpr int SCREEN_HEIGHT = 768;
+    constexpr int SCREEN_WIDTH  = 980;
+    constexpr int SCREEN_HEIGHT = 980;
 
     // Folga fora da tela antes de um objeto ser descartado
     constexpr float CULL_MARGIN = 300.0f;
