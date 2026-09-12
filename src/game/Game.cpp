@@ -10,6 +10,7 @@ void Game::Initialize()
     enemies.clear();
     explosionManager.Clear();
     enemyBullets.clear();
+    playerMissiles.clear();
     score = 0;
 
     mapManager.Load("assets/maps/level1.json");
@@ -103,7 +104,22 @@ void Game::Update(float deltaTime)
         
         // Se tivermos um som de explosão de player, tocaríamos aqui
     }
-    
+
+    // Míssil: o Player só levanta a flag; quem cria e gerencia o míssil de
+    // verdade é o Game, mesmo padrão da bala do tanque (EnemyBullet).
+    if (player.hasFiredMissile)
+    {
+        player.hasFiredMissile = false;
+        PlayerMissile m;
+        m.Initialize(player.GetMissileSpawnPos());
+        playerMissiles.push_back(m);
+    }
+
+    for (auto& m : playerMissiles)
+    {
+        m.Update(deltaTime);
+    }
+
     // Spawn de Inimigos via Mapa do Tiled
     std::vector<EnemySpawnData> newSpawns = mapManager.PopReadySpawns();
     for (const auto& spawn : newSpawns)
@@ -217,9 +233,11 @@ void Game::Update(float deltaTime)
         // Só tenta matar o tanque se ele já não estiver destruído
         if (!e->isDestroyed)
         {
-            if (player.CheckBulletHits(e->GetHitbox()))
+            // Aplica o dano de um tiro que acertou o tanque; primária e
+            // secundária diferem só no valor de dano (a secundária é mais forte).
+            auto aplicarTiroNoTanque = [&](int dano)
             {
-                e->TakeDamage(1); // Arranca 1 de HP por bala
+                e->TakeDamage(dano);
 
                 // Exibe a faísca (FireElement1) em um ponto aleatório dentro da hitbox
                 Rectangle hit = e->GetHitbox();
@@ -237,6 +255,31 @@ void Game::Update(float deltaTime)
                 {
                     // Só faz barulho de metal se o tanque aguentou o tiro
                     PlayImpactSound();
+                }
+            };
+
+            if (player.CheckBulletHits(e->GetHitbox())) aplicarTiroNoTanque(1);
+
+            // Se o próprio tiro primário já destruiu o tanque, não checa a
+            // secundária no mesmo frame (ele já não existe mais como alvo)
+            if (!e->isDestroyed && player.CheckSecondaryBulletHits(e->GetHitbox()))
+            {
+                aplicarTiroNoTanque(5); // Tiro secundário: 5x mais forte
+            }
+
+            // Míssil: destrói em 1 tiro (é anti-blindado de verdade). Um
+            // míssil só atinge um alvo, por isso o break.
+            if (!e->isDestroyed)
+            {
+                for (auto& m : playerMissiles)
+                {
+                    if (!m.active) continue;
+                    if (CheckCollisionRecs(m.GetHitbox(), e->GetHitbox()))
+                    {
+                        m.OnHit();
+                        aplicarTiroNoTanque(9999);
+                        break;
+                    }
                 }
             }
         }
@@ -257,7 +300,9 @@ void Game::Update(float deltaTime)
         // Fora da tela não precisa ser testada
         if (box.y + box.height < 0.0f || box.y > Config::SCREEN_HEIGHT) continue;
 
-        if (player.CheckBulletHits(box))
+        // Aplica o dano de um tiro que acertou a construção; primária e
+        // secundária diferem só no valor de dano.
+        auto aplicarTiroNaConstrucao = [&](int dano)
         {
             // Faísca no ponto do impacto
             float randX = box.x + (float)GetRandomValue(0, (int)box.width);
@@ -266,7 +311,7 @@ void Game::Update(float deltaTime)
 
             Vector2 centro = { box.x + box.width / 2.0f, box.y + box.height / 2.0f };
 
-            if (mapManager.DamageObject(i, 1))
+            if (mapManager.DamageObject(i, dano))
             {
                 // Só o tiro que derrubou entra aqui
                 score += 50; // Construção derrubada
@@ -275,6 +320,28 @@ void Game::Update(float deltaTime)
             else
             {
                 PlayImpactSound();
+            }
+        };
+
+        if (player.CheckBulletHits(box)) aplicarTiroNaConstrucao(1);
+
+        if (!mapManager.IsObjectDestroyed(i) && player.CheckSecondaryBulletHits(box))
+        {
+            aplicarTiroNaConstrucao(5); // Tiro secundário: 5x mais forte
+        }
+
+        // Míssil: derruba em 1 tiro
+        if (!mapManager.IsObjectDestroyed(i))
+        {
+            for (auto& m : playerMissiles)
+            {
+                if (!m.active) continue;
+                if (CheckCollisionRecs(m.GetHitbox(), box))
+                {
+                    m.OnHit();
+                    aplicarTiroNaConstrucao(9999);
+                    break;
+                }
             }
         }
     }
@@ -311,6 +378,13 @@ void Game::Update(float deltaTime)
                                     b.position.y > Config::SCREEN_HEIGHT + Config::CULL_MARGIN;
             return foraDaTela || (!b.active && b.trail.empty());
         }), enemyBullets.end());
+
+    // Descarta os mísseis que sairam da tela ou que já dissiparam o rastro
+    playerMissiles.erase(std::remove_if(playerMissiles.begin(), playerMissiles.end(),
+        [](const PlayerMissile& m) {
+            const bool foraDaTela = m.position.y < -Config::CULL_MARGIN;
+            return foraDaTela || (!m.active && m.trail.empty());
+        }), playerMissiles.end());
 }
 
 void Game::Render()
@@ -345,25 +419,34 @@ void Game::Render()
     // ETAPA 4: DESENHA AS CORES REAIS DOS OBJETOS POR CIMA DA SOMBRA
     for (const auto& e : enemies) e->DrawBody();
 
-    // ETAPA 4.5: SOMBRA DO HELICÓPTERO, POR CIMA DE TUDO QUE ESTÁ NO CHÃO.
-    // Ele voa acima do cenário, então a sombra dele tem que cair SOBRE as
-    // casas e os tanques. Reaproveitamos o mesmo canvas: limpa e usa de novo.
+    // ETAPA 4.5: SOMBRA DO HELICÓPTERO (E DOS MÍSSEIS), POR CIMA DE TUDO QUE
+    // ESTÁ NO CHÃO. Ele voa acima do cenário, então a sombra dele tem que
+    // cair SOBRE as casas e os tanques. Reaproveitamos o mesmo canvas: limpa
+    // e usa de novo.
     BeginTextureMode(globalShadowTarget);
         ClearBackground(BLANK);
         player.DrawShadows();
+        for (const auto& m : playerMissiles) m.DrawShadows();
     EndTextureMode();
 
     StampShadows();
 
+    // Mísseis do player: desenhados ANTES do corpo do helicóptero, pra
+    // ficarem por baixo dele (igual aos mísseis decorativos das asas).
+    for (const auto& m : playerMissiles)
+    {
+        m.Render();
+    }
+
     // ETAPA 4.6: E só então o helicóptero em si
     player.DrawBody();
-    
+
     // ETAPA 5: DESENHAR FUMAÇAS E EXPLOSÕES POR CIMA DE TUDO
     for (const auto& e : enemies)
     {
         if (e->isDestroyed) smokeManager.Render(e->position, e->smokeFrame);
     }
-    
+
     // Tiros Inimigos
     for (const auto& b : enemyBullets)
     {
@@ -397,11 +480,10 @@ static Color HpBarColor(float ratio)
 }
 
 // =====================================================================
-// PROTOTIPO DO HUD DE MUNICAO — numeros fixos de propósito.
-// Ainda não existe arma secundária, míssil nem bomba no jogo (só a
-// metralhadora infinita do Player); isto é só a prévia visual pedida antes
-// de implementar essas armas de verdade. Remover os valores fixos e ligar
-// nos sistemas reais quando eles existirem.
+// HUD DE MUNIÇÃO. O slot do míssil já lê munição de verdade do Player; os
+// slots de secundária e bomba ainda são números fixos — protótipo visual
+// até essas armas existirem de verdade (a secundária já atira, mas ainda
+// não tem munição limitada; a bomba nem existe ainda).
 // =====================================================================
 enum class ArmaTipo { Secundaria, Missil, Bomba };
 struct MunicaoSlot { ArmaTipo tipo; Color cor; int atual; int maximo; };
@@ -445,7 +527,7 @@ static void DrawMunicaoSlot(float x, float y, const MunicaoSlot& slot)
     DrawText(texto, (int)(x + boxSize / 2.0f - textoWidth / 2.0f), (int)(y + boxSize), fontSize, WHITE);
 }
 
-static void RenderMunicaoMockup()
+static void RenderMunicaoMockup(const Player& player)
 {
     // Canto inferior esquerdo: não disputa espaço com a área de leitura
     // vertical (o que importa num scroller vertical é ver o que vem por cima).
@@ -456,9 +538,9 @@ static void RenderMunicaoMockup()
     const float espacamento = 100.0f; // dá respiro entre os 3 ícones
 
     MunicaoSlot slots[3] = {
-        { ArmaTipo::Secundaria, YELLOW, 12, 20 },
-        { ArmaTipo::Missil,     ORANGE,  3,  6 },
-        { ArmaTipo::Bomba,      RED,     1,  3 },
+        { ArmaTipo::Secundaria, YELLOW, 12, 20 },                                    // ainda mockado
+        { ArmaTipo::Missil,     ORANGE, player.missileAmmo, player.missileMaxAmmo }, // real
+        { ArmaTipo::Bomba,      RED,     1,  3 },                                    // ainda mockado
     };
 
     for (int i = 0; i < 3; i++)
@@ -469,7 +551,7 @@ static void RenderMunicaoMockup()
 
 void Game::RenderHUD() const
 {
-    RenderMunicaoMockup(); // PROTÓTIPO — remover quando integrar de verdade
+    RenderMunicaoMockup(player);
 
     // --- Barra de vida, canto superior esquerdo (abaixo do contador de FPS,
     // que o raylib desenha nos primeiros ~30px com DrawFPS) ---
@@ -511,6 +593,7 @@ void Game::Shutdown()
     // senão liberamos texturas com o contexto gráfico já destruído.
     enemies.clear();
     enemyBullets.clear();
+    playerMissiles.clear();
 
     if (bgMusic.frameCount != 0) UnloadMusicStream(bgMusic);
 
@@ -520,6 +603,7 @@ void Game::Shutdown()
 
     player.Unload();
     Tank::UnloadSharedAssets();
+    PlayerMissile::UnloadSharedAssets();
     explosionManager.Unload();
     smokeManager.Unload();
     mapManager.Unload();

@@ -27,6 +27,7 @@ add_executable(IronStrike1981
     src/game/SmokeManager.cpp
     src/game/EnemyBullet.cpp
     src/game/Player.cpp
+    src/game/PlayerMissile.cpp
     src/game/Tank.cpp
     src/game/ExplosionManager.cpp
     src/game/map/MapManager.cpp

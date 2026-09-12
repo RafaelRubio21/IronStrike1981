@@ -6,6 +6,7 @@
 #include "ExplosionManager.h"
 #include "SmokeManager.h"
 #include "EnemyBullet.h"
+#include "PlayerMissile.h"
 #include "map/MapManager.h"
 #include "SoundPool.h"
 #include <vector>
@@ -39,6 +40,7 @@ private:
     SmokeManager smokeManager;
     MapManager mapManager;
     std::vector<EnemyBullet> enemyBullets;
+    std::vector<PlayerMissile> playerMissiles;
 
     float scrollSpeed;
 

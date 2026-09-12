@@ -12,6 +12,16 @@ static const float LANDING_BRAKE_RADIUS = 90.0f;  // começa a frear a partir da
 static const float ENGINE_SHUTDOWN_TIME = 8.1f;   // duração do engine_shutdown.ogg
 // =================================================================
 
+// =================================================================
+// MÍSSIL
+// =================================================================
+static const float MISSILE_COOLDOWN = 1.0f; // segundos até poder disparar outro
+
+// Mesma escala do míssil que voa de verdade (PlayerMissile.cpp), pra ficar
+// visualmente consistente entre o que está preso na asa e o que é disparado.
+static const float MISSILE_WING_SCALE = 0.40f;
+// =================================================================
+
 void Player::Initialize(Vector2 startPos)
 {
     position = startPos;
@@ -60,6 +70,29 @@ void Player::Initialize(Vector2 startPos)
     machineGunSprite = LoadTexture("assets/sprites/helicopter/machine_gun.png");
     if (machineGunSprite.id != 0) hasMachineGun = true;
 
+    // Tiro secundário: mais forte, mas bem mais lento que a metralhadora
+    isShootingSecondary = false;
+    secondaryBullets.clear();
+    secondaryBulletTravel = 0.0f;
+    secondaryBulletSpeed = 900.0f;  // Mais lenta: reforça a sensação de "calibre pesado"
+    secondaryFireRate = 0.17f;      // ~5.9 tiros/s, contra ~12.5 tiros/s da primária
+    secondaryFireTimer = 0.0f;
+
+    // Míssil: munição limitada, 1 por aperto, com cooldown
+    hasFiredMissile = false;
+    missileMaxAmmo = 26;
+    missileAmmo = missileMaxAmmo;
+    missileCooldownTimer = 0.0f;
+
+    // Começa disparando pelo pilone esquerdo; alterna a cada tiro
+    missileNextLaunchIsLeft = true;
+    missileLastLaunchWasLeft = true;
+    missileWingOffsetX = 32.0f; // ajuste fino: distância da asa até o centro
+    missileWingOffsetY = -38.0f; // ajuste fino: altura da asa (mais negativo = mais pra frente/nariz)
+
+    missileWingSprite = LoadTexture("assets/sprites/helicopter/missil.png");
+    hasMissileWingSprite = (missileWingSprite.id != 0);
+
     // Carrega os Sons
     engineLoopActive = false;
     
@@ -81,6 +114,16 @@ void Player::Initialize(Vector2 startPos)
     // reiniciava o proprio buffer antes de terminar de soar.
     mgShootSound.Load("assets/audio/helicopter/machine_gun.ogg", 6);
     mgFinalShotSound = LoadSound("assets/audio/helicopter/machine_gun_final_shot.ogg");
+
+    // Som do tiro secundário. Cadência bem mais lenta que a primária, 3
+    // vozes já bastam.
+    mgSecondaryShootSound.Load("assets/audio/helicopter/machine_gun_secondary.ogg", 3);
+
+    // Som do míssil: cópia de tank/shotting.ogg até ter um som próprio de
+    // lançamento. Cadência baixa (cooldown de 1s), não precisa de SoundPool.
+    missileLaunchSound = LoadSound("assets/audio/helicopter/missile_launch.ogg");
+    if (missileLaunchSound.frameCount != 0) SetSoundVolume(missileLaunchSound, 0.5f);
+
     engineShutdownSound = LoadSound("assets/audio/helicopter/engine_shutdown.ogg");
     // Mesmo volume do motor rodando: sem isso ele tocava no volume padrão do
     // raylib (100%), bem mais alto que o resto do áudio do helicóptero (30%).
@@ -110,9 +153,19 @@ void Player::Update(float deltaTime)
     bullets.erase(std::remove_if(bullets.begin(), bullets.end(),
         [](const Vector2& b) { return b.y < -50.0f; }), bullets.end());
 
+    // Mesma coisa pro tiro secundário
+    secondaryBulletTravel = secondaryBulletSpeed * deltaTime;
+    for (auto& b : secondaryBullets)
+    {
+        b.y -= secondaryBulletTravel;
+    }
+    secondaryBullets.erase(std::remove_if(secondaryBullets.begin(), secondaryBullets.end(),
+        [](const Vector2& b) { return b.y < -50.0f; }), secondaryBullets.end());
+
     if (hitTimer > 0.0f) hitTimer -= deltaTime;
     if (isDestroyed) {
         isShooting = false; // Força parar de atirar ao morrer
+        isShootingSecondary = false;
         if (scale > 0.5f) {
             scale -= 0.5f * deltaTime;
             if (scale <= 0.5f) {
@@ -238,10 +291,12 @@ void Player::Update(float deltaTime)
     {
         Vector2 input = {0.0f, 0.0f};
 
-        if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A))  input.x -= 1.0f;
-        if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) input.x += 1.0f;
-        if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W))    input.y -= 1.0f;
-        if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S))  input.y += 1.0f;
+        // A, S, D e F viraram gatilhos de arma (ver mais abaixo): o movimento
+        // agora é só pelas setas.
+        if (IsKeyDown(KEY_LEFT))  input.x -= 1.0f;
+        if (IsKeyDown(KEY_RIGHT)) input.x += 1.0f;
+        if (IsKeyDown(KEY_UP))    input.y -= 1.0f;
+        if (IsKeyDown(KEY_DOWN))  input.y += 1.0f;
 
         // Acelera baseado no botão apertado
         velocity.x += input.x * acceleration * deltaTime;
@@ -264,19 +319,21 @@ void Player::Update(float deltaTime)
     if (position.y < margin) position.y = margin;
     if (position.y > Config::SCREEN_HEIGHT - margin) position.y = Config::SCREEN_HEIGHT - margin;
 
-    // LOGICA DA METRALHADORA (So atira se o motor ja ligou e nao esta pousando)
-    if (scale >= 1.0f && !isLanding)  
+    // LOGICA DAS ARMAS (So atira se o motor ja ligou e nao esta pousando)
+    // Controles: A = tiro primário (metralhadora), S = tiro secundário.
+    // D (míssil) e F (bomba) ainda não têm sistema implementado.
+    if (scale >= 1.0f && !isLanding)
     {
-        isShooting = (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL));
+        isShooting = IsKeyDown(KEY_A);
         if (isShooting && hasMachineGun)
         {
             mgFrameTimer += deltaTime;
             // Cria uma bala e roda a animacao a cada mgFireRate segundos
-            if (mgFrameTimer >= mgFireRate) 
+            if (mgFrameTimer >= mgFireRate)
             {
                 mgFrameTimer = 0.0f;
                 mgCurrentFrame++;
-                
+
                 int maxFrames = machineGunSprite.width / 16;
                 if (maxFrames <= 0) maxFrames = 1;
 
@@ -284,7 +341,7 @@ void Player::Update(float deltaTime)
 
                 // Spawna a bolinha bem na ponta do bico
                 bullets.push_back({ position.x, position.y + (mgOffsetY * scale) });
-                
+
                 // Dispara o som a cada bala criada!
                 mgShootSound.Play(0.5f);
             }
@@ -301,9 +358,43 @@ void Player::Update(float deltaTime)
             // Toca o som de eco/cauda do ultimo tiro
             if (mgFinalShotSound.frameCount != 0) PlaySound(mgFinalShotSound);
         }
-        
+
         // Guarda o estado para o proximo frame
         wasShooting = isShooting;
+
+        // --- Tiro secundário (mesma estrutura do primário, mais lento) ---
+        isShootingSecondary = IsKeyDown(KEY_S);
+        if (isShootingSecondary)
+        {
+            // Mesmo raciocínio da primária: acumula o tempo e só atira ao
+            // estourar o intervalo (não atira instantaneamente ao apertar)
+            secondaryFireTimer += deltaTime;
+            if (secondaryFireTimer >= secondaryFireRate)
+            {
+                secondaryFireTimer = 0.0f;
+                secondaryBullets.push_back({ position.x, position.y + (mgOffsetY * scale) });
+                mgSecondaryShootSound.Play(0.5f);
+            }
+        }
+
+        // --- Míssil (D): 1 por aperto, munição limitada, com cooldown ---
+        // IsKeyPressed (não IsKeyDown) porque aqui é 1 disparo por aperto,
+        // não uma rajada contínua enquanto a tecla fica pressionada.
+        if (missileCooldownTimer > 0.0f) missileCooldownTimer -= deltaTime;
+
+        hasFiredMissile = false;
+        if (IsKeyPressed(KEY_D) && missileAmmo > 0 && missileCooldownTimer <= 0.0f)
+        {
+            hasFiredMissile = true;
+            missileAmmo--;
+            missileCooldownTimer = MISSILE_COOLDOWN;
+            if (missileLaunchSound.frameCount != 0) PlaySound(missileLaunchSound);
+
+            // Guarda de qual lado saiu ESSE tiro (pro GetMissileSpawnPos, que
+            // o Game chama logo em seguida) e só então alterna pro próximo.
+            missileLastLaunchWasLeft = missileNextLaunchIsLeft;
+            missileNextLaunchIsLeft = !missileNextLaunchIsLeft;
+        }
     }
 
 
@@ -323,6 +414,24 @@ bool Player::CheckBulletHits(Rectangle targetRect)
         {
             bullets.erase(it); // Apaga a bala da array (ela explode no tanque)
             return true; // Acertou!
+        }
+    }
+    return false;
+}
+
+bool Player::CheckSecondaryBulletHits(Rectangle targetRect)
+{
+    for (auto it = secondaryBullets.begin(); it != secondaryBullets.end(); ++it)
+    {
+        // Projétil mais largo e mais lento que o primário — mesma lógica de
+        // caixa varrida (ver CheckBulletHits), com margens maiores pro
+        // tamanho maior do disparo.
+        Rectangle bulletRect = { it->x - 5.0f, it->y - 24.0f, 10.0f, 24.0f + secondaryBulletTravel };
+
+        if (CheckCollisionRecs(bulletRect, targetRect))
+        {
+            secondaryBullets.erase(it);
+            return true;
         }
     }
     return false;
@@ -352,26 +461,57 @@ void Player::DrawShadows() const
         Rectangle sourceRec = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
         Vector2 origin = { (tex.width * scale) / 2.0f, (tex.height * scale) / 2.0f };
         Rectangle shadowDestRec = { position.x + shadowOffset.x, position.y + shadowOffset.y + (rotorOffsetY * scale), tex.width * scale, tex.height * scale };
-        
+
         DrawTexturePro(tex, sourceRec, shadowDestRec, origin, rotorRotation, BLACK);
+    }
+
+    // Sombra dos mísseis presos na asa, mesma distância/altitude do resto
+    // do helicóptero (eles voam junto, não têm sombra própria)
+    if (hasMissileWingSprite)
+    {
+        const float s = MISSILE_WING_SCALE * scale;
+        const float mw = missileWingSprite.width * s;
+        const float mh = missileWingSprite.height * s;
+
+        bool leftVisible, rightVisible;
+        GetWingMissileVisibility(leftVisible, rightVisible);
+
+        const float topY = position.y + (missileWingOffsetY * scale) + shadowOffset.y - mh / 2.0f;
+
+        if (leftVisible)
+        {
+            Vector2 posL = { position.x - (missileWingOffsetX * scale) - mw / 2.0f + shadowOffset.x, topY };
+            DrawTextureEx(missileWingSprite, posL, 0.0f, s, BLACK);
+        }
+        if (rightVisible)
+        {
+            Vector2 posR = { position.x + (missileWingOffsetX * scale) - mw / 2.0f + shadowOffset.x, topY };
+            DrawTextureEx(missileWingSprite, posR, 0.0f, s, BLACK);
+        }
     }
 }
 
 void Player::DrawBody() const
 {
     // -------------------------------------------------------------
+    // ETAPA 2.9: MÍSSEIS DECORATIVOS SOB AS ASAS (indicador de munição)
+    // Desenhados ANTES do corpo, pra ficarem por baixo da fuselagem/asa.
+    // -------------------------------------------------------------
+    DrawWingMissiles();
+
+    // -------------------------------------------------------------
     // ETAPA 3: DESENHA O HELICOPTERO REAL POR CIMA
     // -------------------------------------------------------------
     Color tintColor = WHITE;
     if (isDestroyed && scale > 0.5f) tintColor = GRAY; // Fica cinza apenas enquanto está caindo (fumaça/falha)
     else if (hitTimer > 0.0f && !isDestroyed) tintColor = RED;
-    
+
     if (hasSprite)
     {
         Texture2D tex = (isDestroyed && scale <= 0.5f && destroyedSprite.id != 0) ? destroyedSprite : sprite;
-        Vector2 drawPos = { 
-            position.x - (tex.width * scale) / 2.0f, 
-            position.y - (tex.height * scale) / 2.0f 
+        Vector2 drawPos = {
+            position.x - (tex.width * scale) / 2.0f,
+            position.y - (tex.height * scale) / 2.0f
         };
         DrawTextureEx(tex, drawPos, 0.0f, scale, tintColor);
     }
@@ -419,16 +559,70 @@ void Player::DrawBody() const
     {
         // 1. Rastro da bala (uma linha que simula a velocidade)
         DrawLineEx({b.x, b.y + 15.0f}, {b.x, b.y}, 3.0f, Fade(ORANGE, 0.6f));
-        
+
         // 2. Ponta da bala (brilho amarelo)
         DrawCircleV(b, 2.5f, YELLOW);
-        
+
         // 3. Núcleo ultra-quente da bala (branco puro)
         DrawCircleV(b, 1.0f, WHITE);
     }
+
+    // Tiro secundário: mesma linguagem visual (rastro + núcleo), só que
+    // maior e mais quente (vermelho em vez de laranja) — comunica "calibre
+    // mais pesado" sem precisar de um sprite novo.
+    for (const auto& b : secondaryBullets)
+    {
+        DrawLineEx({b.x, b.y + 26.0f}, {b.x, b.y}, 6.0f, Fade(RED, 0.55f));
+        DrawCircleV(b, 5.0f, ORANGE);
+        DrawCircleV(b, 2.0f, YELLOW);
+    }
 }
 
+void Player::GetWingMissileVisibility(bool& leftVisible, bool& rightVisible) const
+{
+    // Calculado a partir de missileAmmo a cada chamada (não é um estado
+    // guardado): nos 2 últimos tiros, o lado que acabou de disparar some;
+    // se a munição aumentar de novo (um pickup, por exemplo), volta sozinho.
+    leftVisible = true;
+    rightVisible = true;
+    if (missileAmmo <= 0)
+    {
+        leftVisible = false;
+        rightVisible = false;
+    }
+    else if (missileAmmo == 1)
+    {
+        // missileNextLaunchIsLeft já reflete o PRÓXIMO tiro; o lado que
+        // acabou de disparar (e ficou vazio) é o oposto dele.
+        if (missileNextLaunchIsLeft) rightVisible = false;
+        else leftVisible = false;
+    }
+}
 
+void Player::DrawWingMissiles() const
+{
+    if (!hasMissileWingSprite) return;
+
+    const float s = MISSILE_WING_SCALE * scale;
+    const float mw = missileWingSprite.width * s;
+    const float mh = missileWingSprite.height * s;
+
+    bool leftVisible, rightVisible;
+    GetWingMissileVisibility(leftVisible, rightVisible);
+
+    const float topY = position.y + (missileWingOffsetY * scale) - mh / 2.0f;
+
+    if (leftVisible)
+    {
+        Vector2 posL = { position.x - (missileWingOffsetX * scale) - mw / 2.0f, topY };
+        DrawTextureEx(missileWingSprite, posL, 0.0f, s, WHITE);
+    }
+    if (rightVisible)
+    {
+        Vector2 posR = { position.x + (missileWingOffsetX * scale) - mw / 2.0f, topY };
+        DrawTextureEx(missileWingSprite, posR, 0.0f, s, WHITE);
+    }
+}
 
 Rectangle Player::GetHitbox() const
 {
@@ -463,18 +657,23 @@ void Player::Unload()
     if (rotorSprite.id != 0) { UnloadTexture(rotorSprite); rotorSprite.id = 0; }
     if (destroyedRotorSprite.id != 0) { UnloadTexture(destroyedRotorSprite); destroyedRotorSprite.id = 0; }
     if (machineGunSprite.id != 0) { UnloadTexture(machineGunSprite); machineGunSprite.id = 0; }
+    if (missileWingSprite.id != 0) { UnloadTexture(missileWingSprite); missileWingSprite.id = 0; }
     hasSprite = false;
     hasRotor = false;
     hasMachineGun = false;
+    hasMissileWingSprite = false;
 
     if (engineStartingSound.frameCount != 0) { UnloadSound(engineStartingSound); engineStartingSound = {}; }
     mgShootSound.Unload();
     if (mgFinalShotSound.frameCount != 0) { UnloadSound(mgFinalShotSound); mgFinalShotSound = {}; }
+    mgSecondaryShootSound.Unload();
+    if (missileLaunchSound.frameCount != 0) { UnloadSound(missileLaunchSound); missileLaunchSound = {}; }
     if (engineShutdownSound.frameCount != 0) { UnloadSound(engineShutdownSound); engineShutdownSound = {}; }
     if (engineLoopMusic.frameCount != 0) { UnloadMusicStream(engineLoopMusic); engineLoopMusic = {}; }
     engineLoopActive = false;
 
     bullets.clear();
+    secondaryBullets.clear();
 }
 
 void Player::StartLanding(Vector2 landingPos)
@@ -489,4 +688,5 @@ void Player::StartLanding(Vector2 landingPos)
     isShooting = false;
     wasShooting = false;
     mgCurrentFrame = 0;
+    isShootingSecondary = false;
 }
