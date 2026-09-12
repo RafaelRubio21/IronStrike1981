@@ -65,6 +65,20 @@ public:
     int missileAmmo;
     int missileMaxAmmo;
 
+    // --- Bomba (tecla F) ---
+    // Mesmo padrão do míssil: o Player só levanta a flag, quem gerencia a
+    // bomba de verdade (PlayerBomb) é o Game.
+    bool hasDroppedBomb;
+    int bombAmmo;
+    int bombMaxAmmo;
+
+    // Solta do meio do helicóptero (não tem pilone como o míssil)
+    Vector2 GetBombDropPosition() const { return position; }
+
+    // A bomba herda essa velocidade no instante da soltura, e vai perdendo
+    // por atrito com o ar enquanto cai (ver PlayerBomb::Update)
+    Vector2 GetVelocity() const { return velocity; }
+
 private:
     // Desenha os 2 mísseis decorativos sob as asas. Chamado de dentro do
     // DrawBody(). A visibilidade é recalculada aqui a partir de missileAmmo
@@ -117,6 +131,8 @@ private:
 
     float missileCooldownTimer; // conta regressiva até poder disparar outro míssil
     Sound missileLaunchSound;   // toca uma vez por míssil (cadência baixa, não precisa de SoundPool)
+
+    Sound bombFallingSound; // toca uma vez, no instante em que a bomba é solta
 
     // Alterna a cada disparo: true = a próxima saída é pelo pilone
     // esquerdo. missileLastLaunchWasLeft guarda de qual lado saiu o tiro

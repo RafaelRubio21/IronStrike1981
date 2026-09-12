@@ -11,6 +11,7 @@ void Game::Initialize()
     explosionManager.Clear();
     enemyBullets.clear();
     playerMissiles.clear();
+    playerBombs.clear();
     score = 0;
 
     mapManager.Load("assets/maps/level1.json");
@@ -51,7 +52,10 @@ void Game::Initialize()
     {
         impactSounds[i].Load(TextFormat("assets/audio/metal_impact/impact%d.ogg", i + 1), 3);
     }
-    
+
+    bombExplosionSound = LoadSound("assets/audio/helicopter/bomb-explosion.ogg");
+    if (bombExplosionSound.frameCount != 0) SetSoundVolume(bombExplosionSound, 0.7f);
+
     explosionManager.Initialize();
     smokeManager.Initialize();
     
@@ -119,6 +123,97 @@ void Game::Update(float deltaTime)
     {
         m.Update(deltaTime);
     }
+
+    // Bomba: mesmo padrão do míssil, mas herda a velocidade atual do
+    // helicóptero no instante da soltura (inércia) em vez de sair propulsada.
+    if (player.hasDroppedBomb)
+    {
+        player.hasDroppedBomb = false;
+        PlayerBomb b;
+        b.Initialize(player.GetBombDropPosition(), player.GetVelocity());
+        playerBombs.push_back(b);
+    }
+
+    for (auto& b : playerBombs)
+    {
+        b.Update(deltaTime);
+    }
+
+    // Bombas que já terminaram de cair: explodem (efeito visual reaproveitado
+    // do ExplosionManager, mais o som próprio da bomba), causam dano em área
+    // e saem da lista.
+    for (const auto& b : playerBombs)
+    {
+        if (b.HasLanded())
+        {
+            const Vector2 blastCenter = b.GetPosition();
+
+            // Escala bem menor que a do helicóptero batendo no chão (1.5) —
+            // a bomba é pequena e cai perto do próprio helicóptero, uma
+            // explosão grande demais fica desproporcional.
+            const float bombExplosionScale = 0.6f;
+            explosionManager.Spawn(blastCenter, ExplosionType::TYPE_1, bombExplosionScale);
+            if (bombExplosionSound.frameCount != 0) PlaySound(bombExplosionSound);
+
+            // Raio do estilhaço: o dobro do raio VISUAL da explosão (o
+            // sprite de Explosion1 é 256px; na escala da bomba, isso dá um
+            // raio desenhado de 76.8px — o estilhaço abre o dobro disso).
+            const float explosionVisualRadius = (256.0f * bombExplosionScale) / 2.0f;
+            const float blastRadius = explosionVisualRadius * 2.0f;
+
+            // Dano no centro do estilhaço — cai linearmente até 0 na borda
+            // do raio (quanto mais no meio, mais dano; quanto mais na
+            // borda, menos dano).
+            const int maxBlastDamage = 9999;
+            auto DanoPelaDistancia = [&](Vector2 alvoCentro) -> int
+            {
+                const float dx = alvoCentro.x - blastCenter.x;
+                const float dy = alvoCentro.y - blastCenter.y;
+                const float dist = sqrtf(dx * dx + dy * dy);
+                if (dist >= blastRadius) return 0;
+
+                const float falloff = 1.0f - (dist / blastRadius);
+                return (int)(maxBlastDamage * falloff);
+            };
+
+            // Tanques dentro do raio
+            for (auto& e : enemies)
+            {
+                if (e->isDestroyed) continue;
+
+                Rectangle hit = e->GetHitbox();
+                Vector2 centro = { hit.x + hit.width / 2.0f, hit.y + hit.height / 2.0f };
+                int dano = DanoPelaDistancia(centro);
+                if (dano <= 0) continue;
+
+                e->TakeDamage(dano);
+                if (e->hp <= 0 && e->isDestroyed)
+                {
+                    score += 100;
+                    explosionManager.Spawn(e->position, ExplosionType::TYPE_3, 1.0f);
+                }
+            }
+
+            // Construções dentro do raio
+            for (int i = 0; i < mapManager.GetObjectCount(); i++)
+            {
+                if (!mapManager.IsDestructible(i) || mapManager.IsObjectDestroyed(i)) continue;
+
+                Rectangle box = mapManager.GetObjectHitbox(i);
+                Vector2 centro = { box.x + box.width / 2.0f, box.y + box.height / 2.0f };
+                int dano = DanoPelaDistancia(centro);
+                if (dano <= 0) continue;
+
+                if (mapManager.DamageObject(i, dano))
+                {
+                    score += 50;
+                    explosionManager.Spawn(centro, ExplosionType::TYPE_0, 2.0f);
+                }
+            }
+        }
+    }
+    playerBombs.erase(std::remove_if(playerBombs.begin(), playerBombs.end(),
+        [](const PlayerBomb& b) { return b.HasLanded(); }), playerBombs.end());
 
     // Spawn de Inimigos via Mapa do Tiled
     std::vector<EnemySpawnData> newSpawns = mapManager.PopReadySpawns();
@@ -419,29 +514,40 @@ void Game::Render()
     // ETAPA 4: DESENHA AS CORES REAIS DOS OBJETOS POR CIMA DA SOMBRA
     for (const auto& e : enemies) e->DrawBody();
 
-    // ETAPA 4.5: SOMBRA DO HELICÓPTERO (E DOS MÍSSEIS), POR CIMA DE TUDO QUE
-    // ESTÁ NO CHÃO. Ele voa acima do cenário, então a sombra dele tem que
-    // cair SOBRE as casas e os tanques. Reaproveitamos o mesmo canvas: limpa
-    // e usa de novo.
+    // ETAPA 4.5: SOMBRA DO HELICÓPTERO (E DOS MÍSSEIS/BOMBAS), POR CIMA DE
+    // TUDO QUE ESTÁ NO CHÃO. Ele voa acima do cenário, então a sombra dele
+    // tem que cair SOBRE as casas e os tanques. Reaproveitamos o mesmo
+    // canvas: limpa e usa de novo.
     BeginTextureMode(globalShadowTarget);
         ClearBackground(BLANK);
         player.DrawShadows();
         for (const auto& m : playerMissiles) m.DrawShadows();
+        for (const auto& b : playerBombs) b.DrawShadows();
     EndTextureMode();
 
     StampShadows();
 
-    // Mísseis do player: desenhados ANTES do corpo do helicóptero, pra
-    // ficarem por baixo dele (igual aos mísseis decorativos das asas).
+    // Mísseis e bombas do player: desenhados ANTES do corpo do helicóptero,
+    // pra ficarem por baixo dele (igual aos mísseis decorativos das asas).
     for (const auto& m : playerMissiles)
     {
         m.Render();
     }
+    for (const auto& b : playerBombs)
+    {
+        b.Render();
+    }
+
+    // Explosões: efeito de CHÃO (tanque, construção, bomba) — precisa ficar
+    // por baixo do helicóptero, que voa acima de tudo. Antes ficava depois
+    // de player.DrawBody() e a explosão da bomba (que cai bem perto do
+    // helicóptero) acabava cobrindo ele por cima.
+    explosionManager.Render();
 
     // ETAPA 4.6: E só então o helicóptero em si
     player.DrawBody();
 
-    // ETAPA 5: DESENHAR FUMAÇAS E EXPLOSÕES POR CIMA DE TUDO
+    // ETAPA 5: DESENHAR FUMAÇAS POR CIMA DE TUDO
     for (const auto& e : enemies)
     {
         if (e->isDestroyed) smokeManager.Render(e->position, e->smokeFrame);
@@ -452,8 +558,6 @@ void Game::Render()
     {
         b.Render();
     }
-    
-    explosionManager.Render();
 
     // UI
     RenderHUD();
@@ -480,10 +584,9 @@ static Color HpBarColor(float ratio)
 }
 
 // =====================================================================
-// HUD DE MUNIÇÃO. O slot do míssil já lê munição de verdade do Player; os
-// slots de secundária e bomba ainda são números fixos — protótipo visual
-// até essas armas existirem de verdade (a secundária já atira, mas ainda
-// não tem munição limitada; a bomba nem existe ainda).
+// HUD DE MUNIÇÃO. Míssil e bomba já leem munição de verdade do Player; o
+// slot da secundária ainda é número fixo — ela já atira, mas ainda não
+// tem munição limitada.
 // =====================================================================
 enum class ArmaTipo { Secundaria, Missil, Bomba };
 struct MunicaoSlot { ArmaTipo tipo; Color cor; int atual; int maximo; };
@@ -540,7 +643,7 @@ static void RenderMunicaoMockup(const Player& player)
     MunicaoSlot slots[3] = {
         { ArmaTipo::Secundaria, YELLOW, 12, 20 },                                    // ainda mockado
         { ArmaTipo::Missil,     ORANGE, player.missileAmmo, player.missileMaxAmmo }, // real
-        { ArmaTipo::Bomba,      RED,     1,  3 },                                    // ainda mockado
+        { ArmaTipo::Bomba,      RED,    player.bombAmmo,    player.bombMaxAmmo   }, // real
     };
 
     for (int i = 0; i < 3; i++)
@@ -594,16 +697,19 @@ void Game::Shutdown()
     enemies.clear();
     enemyBullets.clear();
     playerMissiles.clear();
+    playerBombs.clear();
 
     if (bgMusic.frameCount != 0) UnloadMusicStream(bgMusic);
 
     for (int i = 0; i < IMPACT_SOUND_COUNT; i++) impactSounds[i].Unload();
+    if (bombExplosionSound.frameCount != 0) { UnloadSound(bombExplosionSound); bombExplosionSound = {}; }
 
     UnloadRenderTexture(globalShadowTarget);
 
     player.Unload();
     Tank::UnloadSharedAssets();
     PlayerMissile::UnloadSharedAssets();
+    PlayerBomb::UnloadSharedAssets();
     explosionManager.Unload();
     smokeManager.Unload();
     mapManager.Unload();

@@ -93,6 +93,12 @@ void Player::Initialize(Vector2 startPos)
     missileWingSprite = LoadTexture("assets/sprites/helicopter/missil.png");
     hasMissileWingSprite = (missileWingSprite.id != 0);
 
+    // Bomba: munição limitada, 1 por aperto, sem cooldown (o Game limita
+    // naturalmente pelo tempo de queda de cada uma)
+    hasDroppedBomb = false;
+    bombMaxAmmo = 3000;
+    bombAmmo = bombMaxAmmo;
+
     // Carrega os Sons
     engineLoopActive = false;
     
@@ -123,6 +129,9 @@ void Player::Initialize(Vector2 startPos)
     // lançamento. Cadência baixa (cooldown de 1s), não precisa de SoundPool.
     missileLaunchSound = LoadSound("assets/audio/helicopter/missile_launch.ogg");
     if (missileLaunchSound.frameCount != 0) SetSoundVolume(missileLaunchSound, 0.5f);
+
+    bombFallingSound = LoadSound("assets/audio/helicopter/falling_bomb.ogg");
+    if (bombFallingSound.frameCount != 0) SetSoundVolume(bombFallingSound, 0.5f);
 
     engineShutdownSound = LoadSound("assets/audio/helicopter/engine_shutdown.ogg");
     // Mesmo volume do motor rodando: sem isso ele tocava no volume padrão do
@@ -394,6 +403,15 @@ void Player::Update(float deltaTime)
             // o Game chama logo em seguida) e só então alterna pro próximo.
             missileLastLaunchWasLeft = missileNextLaunchIsLeft;
             missileNextLaunchIsLeft = !missileNextLaunchIsLeft;
+        }
+
+        // --- Bomba (F): 1 por aperto, munição limitada ---
+        hasDroppedBomb = false;
+        if (IsKeyPressed(KEY_F) && bombAmmo > 0)
+        {
+            hasDroppedBomb = true;
+            bombAmmo--;
+            if (bombFallingSound.frameCount != 0) PlaySound(bombFallingSound);
         }
     }
 
@@ -668,6 +686,7 @@ void Player::Unload()
     if (mgFinalShotSound.frameCount != 0) { UnloadSound(mgFinalShotSound); mgFinalShotSound = {}; }
     mgSecondaryShootSound.Unload();
     if (missileLaunchSound.frameCount != 0) { UnloadSound(missileLaunchSound); missileLaunchSound = {}; }
+    if (bombFallingSound.frameCount != 0) { UnloadSound(bombFallingSound); bombFallingSound = {}; }
     if (engineShutdownSound.frameCount != 0) { UnloadSound(engineShutdownSound); engineShutdownSound = {}; }
     if (engineLoopMusic.frameCount != 0) { UnloadMusicStream(engineLoopMusic); engineLoopMusic = {}; }
     engineLoopActive = false;
